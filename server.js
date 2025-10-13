@@ -1,7 +1,6 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const dotenv = require('dotenv');
-const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const cors = require('cors');
@@ -11,7 +10,6 @@ dotenv.config();
 
 const app = express();
 app.use(express.static('public'));
-app.use(cookieParser());
 
 // Permitir Netlify acessar o backend
 app.use(cors({
@@ -45,16 +43,16 @@ const generateState = () => crypto.randomBytes(16).toString('hex');
 // Login Discord
 app.get('/api/auth/discord', (req, res) => {
   const state = generateState();
-  res.cookie('oauth_state', state, { httpOnly: true, sameSite: 'lax' });
-  const redirect = `https://discord.com/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(process.env.DISCORD_REDIRECT_URI)}&scope=identify+guilds&state=${state}`;
+  const redirect = `https://discord.com/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(
+    process.env.DISCORD_REDIRECT_URI
+  )}&scope=identify+guilds&state=${state}`;
   res.redirect(redirect);
 });
 
 // Callback
 app.get('/api/auth/discord/callback', async (req, res) => {
-  const { code, state } = req.query;
-  const savedState = req.cookies.oauth_state;
-  if (!state || state !== savedState) return res.status(400).send('Invalid state');
+  const { code } = req.query;
+  if (!code) return res.status(400).send('Faltando código de autorização');
 
   try {
     // Troca o code por access_token
@@ -69,7 +67,12 @@ app.get('/api/auth/discord/callback', async (req, res) => {
         redirect_uri: process.env.DISCORD_REDIRECT_URI
       })
     });
+
     const tokenData = await tokenResponse.json();
+    if (tokenData.error) {
+      console.error('Erro ao obter token:', tokenData);
+      return res.status(400).send('Erro ao autenticar com o Discord.');
+    }
 
     // Pega dados do usuário
     const userResponse = await fetch('https://discord.com/api/users/@me', {
@@ -89,20 +92,20 @@ app.get('/api/auth/discord/callback', async (req, res) => {
 
     // Gera token JWT
     const jwtToken = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: '1h' });
-    res.cookie('user', jwtToken, { httpOnly: true, sameSite: 'lax' });
 
-    // Redireciona para o Netlify
-    res.redirect('https://santamariarpteste.netlify.app/suaconta');
+    // Redireciona para o Netlify com token JWT
+    res.redirect(`https://santamariarpteste.netlify.app/suaconta?token=${jwtToken}`);
   } catch (err) {
     console.error(err);
     res.status(500).send('Erro ao autenticar com o Discord.');
   }
 });
 
-// Rota /api/me
+// Rota /api/me (verificar token)
 app.get('/api/me', (req, res) => {
-  const token = req.cookies.user;
+  const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Não autenticado' });
+
   try {
     const user = jwt.verify(token, process.env.JWT_SECRET);
     res.json(user);
