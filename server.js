@@ -25,13 +25,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ PERMITIR FRONTEND DO NETLIFY
+// ✅ CORS para qualquer subdomínio Netlify
 app.use(
   cors({
-    origin: [
-      "https://santamariarpteste.netlify.app",
-      "https://*.netlify.app",
-    ],
+    origin: function (origin, callback) {
+      if (!origin || origin.endsWith(".netlify.app")) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
@@ -76,8 +79,9 @@ app.get("/api/auth/discord/callback", async (req, res) => {
   const { code, state } = req.query;
   const savedState = req.cookies.oauth_state;
 
-  if (!state || state !== savedState)
+  if (!state || state !== savedState) {
     return res.status(400).send("Invalid state");
+  }
 
   try {
     // Trocar código por access_token
@@ -128,12 +132,15 @@ app.get("/api/auth/discord/callback", async (req, res) => {
       expiresIn: "1h",
     });
 
-    // ✅ Cookie compatível com Netlify e todos os navegadores
-res.cookie("oauth_state", state, {
-  httpOnly: true,
-  secure: true,
-  sameSite: "none",
-});
+    // ✅ Salvar JWT em cookie
+    res.cookie("user", jwtToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
+
+    // ✅ Limpar oauth_state
+    res.clearCookie("oauth_state");
 
     // Redirecionar pro site
     res.redirect("https://santamariarpteste.netlify.app/suaconta");
