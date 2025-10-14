@@ -133,11 +133,12 @@ app.get("/api/auth/discord/callback", async (req, res) => {
     });
 
     // ✅ Salvar JWT em cookie
-    res.cookie("user", jwtToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-    });
+res.cookie("oauth_state", state, {
+  httpOnly: true,
+  secure: true,      // necessário para cross-site HTTPS
+  sameSite: "none",  // necessário para cross-site
+});
+
 
     // ✅ Limpar oauth_state
     res.clearCookie("oauth_state");
@@ -176,5 +177,6 @@ app.get("/api/logout", (req, res) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
