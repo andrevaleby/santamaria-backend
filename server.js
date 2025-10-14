@@ -65,7 +65,13 @@ const generateState = () => crypto.randomBytes(16).toString("hex");
 // ✅ LOGIN COM DISCORD
 app.get("/api/auth/discord", (req, res) => {
   const state = generateState();
-  res.cookie("oauth_state", state, { httpOnly: true, sameSite: "lax" });
+
+  // ⚠️ Cookie configurado para cross-site
+  res.cookie("oauth_state", state, {
+    httpOnly: true,
+    secure: true,      // obrigatório para HTTPS cross-site
+    sameSite: "none",  // necessário para cross-site
+  });
 
   const redirect = `https://discord.com/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(
     process.env.DISCORD_REDIRECT_URI
@@ -132,13 +138,12 @@ app.get("/api/auth/discord/callback", async (req, res) => {
       expiresIn: "1h",
     });
 
-    // ✅ Salvar JWT em cookie
-res.cookie("oauth_state", state, {
-  httpOnly: true,
-  secure: true,      // necessário para cross-site HTTPS
-  sameSite: "none",  // necessário para cross-site
-});
-
+    // ✅ Salvar JWT em cookie para cross-site
+    res.cookie("user", jwtToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
 
     // ✅ Limpar oauth_state
     res.clearCookie("oauth_state");
@@ -177,6 +182,3 @@ app.get("/api/logout", (req, res) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
-
-
-
