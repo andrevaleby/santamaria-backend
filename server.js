@@ -14,10 +14,24 @@ const app = express();
 app.use(express.static("public"));
 app.use(cookieParser());
 
+// ✅ FORÇAR HTTPS (Render exige HTTPS para cookies cross-site)
+app.use((req, res, next) => {
+  if (
+    req.headers["x-forwarded-proto"] !== "https" &&
+    process.env.NODE_ENV === "production"
+  ) {
+    return res.redirect(`https://${req.headers.host}${req.url}`);
+  }
+  next();
+});
+
 // ✅ PERMITIR FRONTEND DO NETLIFY
 app.use(
   cors({
-    origin: "https://santamariarpteste.netlify.app",
+    origin: [
+      "https://santamariarpteste.netlify.app",
+      "https://*.netlify.app",
+    ],
     credentials: true,
   })
 );
@@ -57,15 +71,16 @@ app.get("/api/auth/discord", (req, res) => {
   res.redirect(redirect);
 });
 
-// ✅ CALLBACK DISCORD
+// ✅ CALLBACK DO DISCORD
 app.get("/api/auth/discord/callback", async (req, res) => {
   const { code, state } = req.query;
   const savedState = req.cookies.oauth_state;
+
   if (!state || state !== savedState)
     return res.status(400).send("Invalid state");
 
   try {
-    // Troca o code por access_token
+    // Trocar código por access_token
     const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -84,18 +99,18 @@ app.get("/api/auth/discord/callback", async (req, res) => {
       return res.status(400).send("Erro ao autenticar com o Discord (token).");
     }
 
-    // Pega dados do usuário
+    // Buscar dados do usuário
     const userResponse = await fetch("https://discord.com/api/users/@me", {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
 
     const user = await userResponse.json();
-    if (user.id === undefined) {
-      console.error("Erro ao pegar dados do usuário:", user);
+    if (!user.id) {
+      console.error("Erro ao buscar usuário:", user);
       return res.status(400).send("Erro ao autenticar com o Discord (user).");
     }
 
-    // Salva no banco
+    // Salvar/atualizar no banco
     await pool.query(
       `
       INSERT INTO users (discord_id, username, avatar, discriminator)
@@ -108,19 +123,19 @@ app.get("/api/auth/discord/callback", async (req, res) => {
       [user.id, user.username, user.avatar, user.discriminator]
     );
 
-    // Cria token JWT
+    // Criar JWT
     const jwtToken = jwt.sign(user, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
 
-    // ✅ Cookie seguro (Netlify + Render)
+    // ✅ Cookie compatível com Netlify e todos os navegadores
     res.cookie("user", jwtToken, {
       httpOnly: true,
       secure: true,
       sameSite: "none",
     });
 
-    // Redireciona pro Netlify
+    // Redirecionar pro site
     res.redirect("https://santamariarpteste.netlify.app/suaconta");
   } catch (err) {
     console.error("Erro no callback Discord:", err);
@@ -141,6 +156,17 @@ app.get("/api/me", (req, res) => {
   }
 });
 
+// ✅ ROTA DE LOGOUT
+app.get("/api/logout", (req, res) => {
+  res.clearCookie("user", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+  });
+  res.redirect("https://santamariarpteste.netlify.app/");
+});
+
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
