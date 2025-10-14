@@ -129,11 +129,11 @@ app.get("/api/auth/discord/callback", async (req, res) => {
     });
 
     // ✅ Cookie compatível com Netlify e todos os navegadores
-    res.cookie("user", jwtToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-    });
+res.cookie("oauth_state", state, {
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+});
 
     // Redirecionar pro site
     res.redirect("https://santamariarpteste.netlify.app/suaconta");
@@ -169,4 +169,5 @@ app.get("/api/logout", (req, res) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
