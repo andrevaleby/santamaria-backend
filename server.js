@@ -7,12 +7,20 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const cors = require("cors");
 const { Pool } = require("pg");
+const path = require("path");
 
 dotenv.config();
 
 const app = express();
-app.use(express.static("public"));
 app.use(cookieParser());
+
+// ✅ SERVIR ARQUIVOS ESTÁTICOS
+app.use(express.static("public"));
+
+// ✅ ROTA PARA FAVICON
+app.get("/favicon.ico", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "favicon.ico"))
+);
 
 // ✅ FORÇAR HTTPS (Render exige HTTPS para cookies cross-site)
 app.use((req, res, next) => {
