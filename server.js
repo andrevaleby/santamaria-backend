@@ -17,7 +17,7 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: [
-      "https://testes.andredevhub.com", // seu site novo (Hostinger)
+      "https://andredevhub.com", // seu site novo (Hostinger)
       "https://www.testes.andredevhub.com"
     ],
     credentials: true,
@@ -156,5 +156,6 @@ app.get("/api/logout", (req, res) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
