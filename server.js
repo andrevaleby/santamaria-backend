@@ -150,12 +150,13 @@ app.get("/api/logout", (req, res) => {
     secure: true,
     sameSite: "none",
   });
-  res.redirect("https://testes.andredevhub.com/");
+  res.redirect("https://testes.andredevhub.com/suaconta.html");
 });
 
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
