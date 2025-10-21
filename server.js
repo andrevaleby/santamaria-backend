@@ -112,21 +112,52 @@ app.get("/api/auth/discord/callback", async (req, res) => {
     const jwtToken = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "1h" });
 
     // ✅ Cookie seguro entre Render → Hostinger
-res.cookie('user', jwtToken, {
-  httpOnly: true,
-  secure: true,
-  sameSite: 'none'
-});
+    res.cookie("user", jwtToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
 
+    // ✅ Enviar webhook pro Discord com embed bonito
+    const avatarURL = user.avatar
+      ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+      : "https://cdn.discordapp.com/embed/avatars/0.png";
 
+    const horaLogin = new Date().toLocaleString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+    });
 
-    // ✅ Redirecionar para sua nova hospedagem (Hostinger)
+    await fetch(process.env.DISCORD_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        embeds: [
+          {
+            title: "🟢 Novo Login no Site",
+            color: 5763719, // Azul
+            thumbnail: { url: avatarURL },
+            fields: [
+              { name: "👤 Usuário", value: user.username, inline: true },
+              { name: "🆔 ID", value: user.id, inline: true },
+              { name: "🕒 Horário", value: horaLogin, inline: false },
+            ],
+            footer: {
+              text: "Painel de Login - Santa Maria RP",
+            },
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      }),
+    });
+
+    // ✅ Redirecionar para a Hostinger
     res.redirect("https://testes.andredevhub.com/suaconta.html");
   } catch (err) {
     console.error("❌ Erro no callback:", err);
     res.status(500).send("Erro interno ao autenticar com o Discord.");
   }
 });
+
 
 // ✅ ROTA /api/me — usada no frontend da Hostinger
 app.get("/api/me", (req, res) => {
@@ -166,6 +197,7 @@ app.post('/api/logout', (req, res) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
