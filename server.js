@@ -141,6 +141,8 @@ app.get("/api/me", (req, res) => {
   }
 });
 
+
+
 // ✅ ROTA DE LOGOUT
 app.get("/api/logout", (req, res) => {
   res.clearCookie("user", {
@@ -151,9 +153,20 @@ app.get("/api/logout", (req, res) => {
   res.redirect("https://testes.andredevhub.com/suaconta.html");
 });
 
+app.post('/api/logout', (req, res) => {
+  res.clearCookie('user', {
+    httpOnly: true,
+    sameSite: 'none',
+    secure: true
+  });
+  res.status(200).json({ message: 'Logout realizado com sucesso.' });
+});
+
+
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
