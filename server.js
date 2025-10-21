@@ -121,7 +121,7 @@ app.get("/api/auth/discord/callback", async (req, res) => {
 
 
     // ✅ Redirecionar para sua nova hospedagem (Hostinger)
-    res.redirect("https://testes.andredevhub.com/suaconta");
+    res.redirect("https://testes.andredevhub.com/suaconta.html");
   } catch (err) {
     console.error("❌ Erro no callback:", err);
     res.status(500).send("Erro interno ao autenticar com o Discord.");
@@ -154,6 +154,7 @@ app.get("/api/logout", (req, res) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
