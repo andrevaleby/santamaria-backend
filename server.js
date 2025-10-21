@@ -112,12 +112,12 @@ app.get("/api/auth/discord/callback", async (req, res) => {
     const jwtToken = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "1h" });
 
     // ✅ Cookie seguro entre Render → Hostinger
-   res.cookie('oauth_state', state, {
+res.cookie('user', jwtToken, {
   httpOnly: true,
-  sameSite: 'none',
   secure: true,
-  domain: 'andredevhub.com'
+  sameSite: 'none'
 });
+
 
 
     // ✅ Redirecionar para sua nova hospedagem (Hostinger)
@@ -166,6 +166,7 @@ app.post('/api/logout', (req, res) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
