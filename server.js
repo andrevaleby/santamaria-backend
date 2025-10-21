@@ -14,15 +14,11 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 // ✅ CORS — permitir frontend da Hostinger
-app.use(
-  cors({
-    origin: [
-      "https://andredevhub.com", // seu site novo (Hostinger)
-      "https://www.testes.andredevhub.com"
-    ],
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: 'https://testes.andredevhub.com',
+  credentials: true
+}));
+
 
 // ✅ BANCO (Render)
 const pool = new Pool({
@@ -116,11 +112,13 @@ app.get("/api/auth/discord/callback", async (req, res) => {
     const jwtToken = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "1h" });
 
     // ✅ Cookie seguro entre Render → Hostinger
-    res.cookie("user", jwtToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-    });
+   res.cookie('oauth_state', state, {
+  httpOnly: true,
+  sameSite: 'none',
+  secure: true,
+  domain: 'andredevhub.com'
+});
+
 
     // ✅ Redirecionar para sua nova hospedagem (Hostinger)
     res.redirect("https://testes.andredevhub.com/suaconta");
@@ -156,6 +154,7 @@ app.get("/api/logout", (req, res) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
