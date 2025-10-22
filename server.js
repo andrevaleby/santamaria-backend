@@ -184,9 +184,6 @@ const guildsResponse = await fetch("https://discord.com/api/users/@me/guilds", {
 const guilds = await guildsResponse.json();
 const estaNoServidor = guilds.some(g => g.id === "1299085549256310924");
 
-
-
-
 // ✅ ROTA DE LOGOUT
 app.get("/api/logout", (req, res) => {
   res.clearCookie("user", {
@@ -210,6 +207,7 @@ app.post('/api/logout', (req, res) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
