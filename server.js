@@ -58,7 +58,7 @@ app.get("/api/auth/discord", (req, res) => {
   res.redirect(redirect);
 });
 
-// ✅ CALLBACK DO DISCORD
+// ✅ CALLBACK DO DISCORD (Render)
 app.get("/api/auth/discord/callback", async (req, res) => {
   const { code, state } = req.query;
   const savedState = req.cookies.oauth_state;
@@ -92,68 +92,82 @@ app.get("/api/auth/discord/callback", async (req, res) => {
 
     if (!user.id) return res.status(400).send("Erro ao buscar dados do Discord.");
 
-    // Pegar guilds (para saber se está no servidor)
+    // Salvar usuário no banco
+    await pool.query(
+      `
+      INSERT INTO users (discord_id, username, avatar, discriminator)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (discord_id) DO UPDATE SET
+      username = EXCLUDED.username,
+      avatar = EXCLUDED.avatar,
+      discriminator = EXCLUDED.discriminator;
+    `,
+      [user.id, user.username, user.avatar, user.discriminator]
+    );
+
+    // Criar JWT
+    const jwtToken = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+    // Salvar cookie
+    res.cookie("user", jwtToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    });
+
+    // Verificar se o usuário está no servidor
     const guildsResponse = await fetch("https://discord.com/api/users/@me/guilds", {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
     const guilds = await guildsResponse.json();
 
-    const estaNoServidor = guilds.some(g => g.id === "1299085549256310924");
+    const estaNoServidor = Array.isArray(guilds) && guilds.some(g => g.id === "1299085549256310924");
 
-    // Salvar no banco
-    await pool.query(
-      `
-      INSERT INTO users (discord_id, username, avatar, discriminator, esta_no_servidor)
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (discord_id) DO UPDATE SET
-      username = EXCLUDED.username,
-      avatar = EXCLUDED.avatar,
-      discriminator = EXCLUDED.discriminator,
-      esta_no_servidor = EXCLUDED.esta_no_servidor;
-    `,
-      [user.id, user.username, user.avatar, user.discriminator, estaNoServidor]
-    );
+    // Enviar webhook
+    const avatarURL = user.avatar
+      ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+      : "https://cdn.discordapp.com/embed/avatars/0.png";
 
-    // Criar JWT
-    const jwtToken = jwt.sign(
-      { id: user.id, username: user.username, avatar: user.avatar, estaNoServidor },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
+    const horaLogin = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
-    // Cookie seguro entre Render → Hostinger
-    res.cookie("user", jwtToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none"
+    await fetch(process.env.DISCORD_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        embeds: [
+          {
+            title: "🟢 Novo Login no Site",
+            color: estaNoServidor ? 5763719 : 15548997, // verde se estiver, vermelho se não
+            thumbnail: { url: avatarURL },
+            fields: [
+              { name: "👤 Usuário", value: user.username, inline: true },
+              { name: "🆔 ID", value: user.id, inline: true },
+              {
+                name: "🎮 Está no servidor?",
+                value: estaNoServidor ? "✅ Sim" : "❌ Não",
+                inline: false,
+              },
+              { name: "🕒 Horário", value: horaLogin, inline: false },
+            ],
+            footer: { text: "Painel Santa Maria RP" },
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      }),
     });
 
-    // ✅ Enviar webhook para Discord
-    const webhookData = {
-      embeds: [
-        {
-          title: "🧑 Novo Login",
-          color: 5814783,
-          fields: [
-            { name: "👤 Usuário", value: `${user.username}`, inline: true },
-            { name: "🆔 ID", value: `${user.id}`, inline: true },
-            { name: "🕒 Hora", value: new Date().toLocaleString("pt-BR"), inline: false },
-            { name: "📌 Está no servidor?", value: estaNoServidor ? "✅ Sim" : "❌ Não", inline: true }
-          ],
-          thumbnail: {
-            url: `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
-          },
-        },
-      ],
-    };
-
-    if (process.env.DISCORD_WEBHOOK_URL) {
-      await fetch(process.env.DISCORD_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(webhookData),
-      });
+    // Redirecionar
+    if (!estaNoServidor) {
+      return res.redirect("https://testes.andredevhub.com/naodiscord.html");
     }
+
+    res.redirect("https://testes.andredevhub.com/suaconta.html");
+  } catch (err) {
+    console.error("❌ Erro no callback:", err);
+    res.status(500).send("Erro interno ao autenticar com o Discord.");
+  }
+});
+
 
     // ✅ Redirecionar para sua hospedagem (Hostinger)
     res.redirect("https://testes.andredevhub.com/suaconta.html");
@@ -199,3 +213,4 @@ app.post('/api/logout', (req, res) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
