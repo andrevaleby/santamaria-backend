@@ -12,13 +12,13 @@ dotenv.config();
 const app = express();
 app.use(express.static("public"));
 app.use(cookieParser());
-app.use(express.json());
 
 // ✅ CORS — permitir frontend da Hostinger
 app.use(cors({
-  origin: "https://testes.andredevhub.com",
+  origin: 'https://testes.andredevhub.com',
   credentials: true
 }));
+
 
 // ✅ BANCO (Render)
 const pool = new Pool({
@@ -35,7 +35,6 @@ const pool = new Pool({
       username VARCHAR(100),
       avatar VARCHAR(200),
       discriminator VARCHAR(10),
-      esta_no_servidor BOOLEAN DEFAULT false,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
@@ -47,7 +46,11 @@ const generateState = () => crypto.randomBytes(16).toString("hex");
 // ✅ LOGIN COM DISCORD
 app.get("/api/auth/discord", (req, res) => {
   const state = generateState();
-  res.cookie("oauth_state", state, { httpOnly: true, secure: true, sameSite: "none" });
+  res.cookie("oauth_state", state, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+  });
 
   const redirect = `https://discord.com/oauth2/authorize?client_id=${
     process.env.DISCORD_CLIENT_ID
@@ -92,7 +95,7 @@ app.get("/api/auth/discord/callback", async (req, res) => {
 
     if (!user.id) return res.status(400).send("Erro ao buscar dados do Discord.");
 
-    // Salvar usuário no banco
+    // Salvar no banco
     await pool.query(
       `
       INSERT INTO users (discord_id, username, avatar, discriminator)
@@ -108,27 +111,21 @@ app.get("/api/auth/discord/callback", async (req, res) => {
     // Criar JWT
     const jwtToken = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "1h" });
 
-    // Salvar cookie
+    // ✅ Cookie seguro entre Render → Hostinger
     res.cookie("user", jwtToken, {
       httpOnly: true,
       secure: true,
       sameSite: "none",
     });
 
-    // Verificar se o usuário está no servidor
-    const guildsResponse = await fetch("https://discord.com/api/users/@me/guilds", {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    });
-    const guilds = await guildsResponse.json();
-
-    const estaNoServidor = Array.isArray(guilds) && guilds.some(g => g.id === "1299085549256310924");
-
-    // Enviar webhook
+    // ✅ Enviar webhook pro Discord com embed bonito
     const avatarURL = user.avatar
       ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
       : "https://cdn.discordapp.com/embed/avatars/0.png";
 
-    const horaLogin = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+    const horaLogin = new Date().toLocaleString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+    });
 
     await fetch(process.env.DISCORD_WEBHOOK_URL, {
       method: "POST",
@@ -137,30 +134,23 @@ app.get("/api/auth/discord/callback", async (req, res) => {
         embeds: [
           {
             title: "🟢 Novo Login no Site",
-            color: estaNoServidor ? 5763719 : 15548997, // verde se estiver, vermelho se não
+            color: 5763719, // Azul
             thumbnail: { url: avatarURL },
             fields: [
               { name: "👤 Usuário", value: user.username, inline: true },
               { name: "🆔 ID", value: user.id, inline: true },
-              {
-                name: "🎮 Está no servidor?",
-                value: estaNoServidor ? "✅ Sim" : "❌ Não",
-                inline: false,
-              },
               { name: "🕒 Horário", value: horaLogin, inline: false },
             ],
-            footer: { text: "Painel Santa Maria RP" },
+            footer: {
+              text: "Painel de Login - Santa Maria RP",
+            },
             timestamp: new Date().toISOString(),
           },
         ],
       }),
     });
 
-    // Redirecionar
-    if (!estaNoServidor) {
-      return res.redirect("https://testes.andredevhub.com/naodiscord.html");
-    }
-
+    // ✅ Redirecionar para a Hostinger
     res.redirect("https://testes.andredevhub.com/suaconta.html");
   } catch (err) {
     console.error("❌ Erro no callback:", err);
@@ -169,16 +159,7 @@ app.get("/api/auth/discord/callback", async (req, res) => {
 });
 
 
-    // ✅ Redirecionar para sua hospedagem (Hostinger)
-    res.redirect("https://testes.andredevhub.com/suaconta.html");
-
-  } catch (err) {
-    console.error("❌ Erro no callback:", err);
-    res.status(500).send("Erro interno ao autenticar com o Discord.");
-  }
-});
-
-// ✅ ROTA /api/me
+// ✅ ROTA /api/me — usada no frontend da Hostinger
 app.get("/api/me", (req, res) => {
   const token = req.cookies.user;
   if (!token) return res.status(401).json({ error: "Não autenticado" });
@@ -191,7 +172,9 @@ app.get("/api/me", (req, res) => {
   }
 });
 
-// ✅ LOGOUT
+
+
+// ✅ ROTA DE LOGOUT
 app.get("/api/logout", (req, res) => {
   res.clearCookie("user", {
     httpOnly: true,
@@ -210,7 +193,15 @@ app.post('/api/logout', (req, res) => {
   res.status(200).json({ message: 'Logout realizado com sucesso.' });
 });
 
+
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
+
+
+
+
+
+
 
