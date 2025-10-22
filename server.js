@@ -26,7 +26,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-// ✅ Tabela de usuários
+// ✅ Garantir tabela de usuários
 (async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -79,7 +79,10 @@ app.get("/api/auth/discord/callback", async (req, res) => {
     });
 
     const tokenData = await tokenResponse.json();
-    if (tokenData.error) return res.status(400).send("Erro ao autenticar com o Discord.");
+    if (tokenData.error) {
+      console.error("❌ Erro ao obter token:", tokenData);
+      return res.status(400).send("Erro ao autenticar com o Discord.");
+    }
 
     // Pegar dados do usuário
     const userResponse = await fetch("https://discord.com/api/users/@me", {
@@ -87,7 +90,9 @@ app.get("/api/auth/discord/callback", async (req, res) => {
     });
     const user = await userResponse.json();
 
-    // Pegar guilds do usuário
+    if (!user.id) return res.status(400).send("Erro ao buscar dados do Discord.");
+
+    // Pegar guilds (para saber se está no servidor)
     const guildsResponse = await fetch("https://discord.com/api/users/@me/guilds", {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
@@ -116,18 +121,18 @@ app.get("/api/auth/discord/callback", async (req, res) => {
       { expiresIn: "1h" }
     );
 
-    // Cookie
+    // Cookie seguro entre Render → Hostinger
     res.cookie("user", jwtToken, {
       httpOnly: true,
       secure: true,
       sameSite: "none"
     });
 
-    // ✅ Enviar webhook
+    // ✅ Enviar webhook para Discord
     const webhookData = {
       embeds: [
         {
-          title: "🧑 Novo Login no Site",
+          title: "🧑 Novo Login",
           color: 5814783,
           fields: [
             { name: "👤 Usuário", value: `${user.username}`, inline: true },
@@ -135,19 +140,24 @@ app.get("/api/auth/discord/callback", async (req, res) => {
             { name: "🕒 Hora", value: new Date().toLocaleString("pt-BR"), inline: false },
             { name: "📌 Está no servidor?", value: estaNoServidor ? "✅ Sim" : "❌ Não", inline: true }
           ],
-          thumbnail: { url: `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png` },
+          thumbnail: {
+            url: `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+          },
         },
       ],
     };
 
-    await fetch(process.env.DISCORD_WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(webhookData),
-    });
+    if (process.env.DISCORD_WEBHOOK_URL) {
+      await fetch(process.env.DISCORD_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(webhookData),
+      });
+    }
 
-    // ✅ Redirecionar para sua hospedagem
+    // ✅ Redirecionar para sua hospedagem (Hostinger)
     res.redirect("https://testes.andredevhub.com/suaconta.html");
+
   } catch (err) {
     console.error("❌ Erro no callback:", err);
     res.status(500).send("Erro interno ao autenticar com o Discord.");
@@ -169,11 +179,23 @@ app.get("/api/me", (req, res) => {
 
 // ✅ LOGOUT
 app.get("/api/logout", (req, res) => {
-  res.clearCookie("user", { httpOnly: true, secure: true, sameSite: "none" });
+  res.clearCookie("user", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+  });
   res.redirect("https://testes.andredevhub.com/suaconta.html");
 });
 
-// ✅ PORTA
+app.post('/api/logout', (req, res) => {
+  res.clearCookie('user', {
+    httpOnly: true,
+    sameSite: 'none',
+    secure: true
+  });
+  res.status(200).json({ message: 'Logout realizado com sucesso.' });
+});
+
+// ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
-
