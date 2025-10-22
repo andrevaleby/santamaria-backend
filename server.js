@@ -1,11 +1,12 @@
-const express = require("express");
-const fetch = require("node-fetch");
-const dotenv = require("dotenv");
-const cookieParser = require("cookie-parser");
-const jwt = require("jsonwebtoken");
-const crypto = require("crypto");
-const cors = require("cors");
-const { Pool } = require("pg");
+import express from "express";
+import fetch from "node-fetch";
+import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import cors from "cors";
+import pkg from "pg";
+const { Pool } = pkg;
 
 dotenv.config();
 
@@ -209,6 +210,7 @@ app.post('/api/logout', (req, res) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
