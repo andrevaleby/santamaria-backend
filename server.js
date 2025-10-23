@@ -97,11 +97,21 @@ app.get("/api/auth/discord/callback", async (req, res) => {
     if (!user.id) return res.status(400).send("Erro ao buscar dados do Discord.");
 
     // Verificar se está no servidor
-    const guildsResponse = await fetch("https://discord.com/api/users/@me/guilds", {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
-    });
-    const guilds = await guildsResponse.json();
-    const estaNoServidor = guilds.some(g => g.id === "1299085549256310924");
+// Pegar dados do usuário
+const userResponse = await fetch("https://discord.com/api/users/@me", {
+  headers: { Authorization: `Bearer ${tokenData.access_token}` },
+});
+const user = await userResponse.json();
+
+if (!user.id) return res.status(400).send("Erro ao buscar dados do Discord.");
+
+// ✅ Verificar se o usuário está no servidor do Discord
+const guildsResponse = await fetch("https://discord.com/api/users/@me/guilds", {
+  headers: { Authorization: `Bearer ${tokenData.access_token}` },
+});
+const guilds = await guildsResponse.json();
+const estaNoServidor = guilds.some(g => g.id === "1299085549256310924");
+
 
     // Salvar no banco
     await pool.query(`
@@ -162,8 +172,6 @@ app.get("/api/auth/discord/callback", async (req, res) => {
   }
 });
 
-
-
 // ✅ ROTA /api/me — usada no frontend da Hostinger
 app.get("/api/me", (req, res) => {
   const token = req.cookies.user;
@@ -199,6 +207,7 @@ app.post('/api/logout', (req, res) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
