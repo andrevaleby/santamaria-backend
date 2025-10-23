@@ -31,6 +31,27 @@ const pool = new Pool({
 (async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
+    (async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      discord_id VARCHAR(50) UNIQUE,
+      username VARCHAR(100),
+      avatar VARCHAR(200),
+      discriminator VARCHAR(10),
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  // ✅ garante que a coluna exista
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS esta_no_servidor BOOLEAN DEFAULT false;
+  `);
+
+  console.log("✅ Tabela 'users' verificada e atualizada");
+})();
+
       id SERIAL PRIMARY KEY,
       discord_id VARCHAR(50) UNIQUE,
       username VARCHAR(100),
@@ -199,3 +220,4 @@ app.post('/api/logout', (req, res) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
