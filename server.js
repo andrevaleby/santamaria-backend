@@ -31,9 +31,6 @@ const pool = new Pool({
 (async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
-    (async () => {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
       discord_id VARCHAR(50) UNIQUE,
       username VARCHAR(100),
@@ -50,17 +47,6 @@ const pool = new Pool({
   `);
 
   console.log("✅ Tabela 'users' verificada e atualizada");
-})();
-
-      id SERIAL PRIMARY KEY,
-      discord_id VARCHAR(50) UNIQUE,
-      username VARCHAR(100),
-      avatar VARCHAR(200),
-      discriminator VARCHAR(10),
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-  `);
-  console.log("✅ Tabela 'users' verificada");
 })();
 
 const generateState = () => crypto.randomBytes(16).toString("hex");
@@ -220,4 +206,3 @@ app.post('/api/logout', (req, res) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
-
