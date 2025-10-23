@@ -153,9 +153,9 @@ app.get("/api/auth/discord/callback", async (req, res) => {
               { name: "👤 Usuário", value: user.username, inline: true },
               { name: "🆔 ID", value: user.id, inline: true },
               { name: "🕒 Horário", value: horaLogin, inline: false },
-              { name: "📌 Está no servidor?", value: estaNoServidor ? "✅ Sim" : "❌ Não", inline: true }
+              { name: "👥 Está no servidor?", value: estaNoServidor ? "✅ Sim" : "❌ Não", inline: true }
             ],
-            footer: { text: "Painel de Login - Santa Maria RP" },
+            footer: { text: "Painel de Login - © Santa Maria RP" },
             timestamp: new Date().toISOString(),
           }],
         }),
@@ -206,3 +206,4 @@ app.post('/api/logout', (req, res) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
