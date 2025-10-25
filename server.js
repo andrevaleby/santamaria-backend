@@ -8,6 +8,16 @@ import cors from "cors";
 import pkg from "pg";
 const { Pool } = pkg;
 
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  EmbedBuilder
+} from "discord.js";
+
 dotenv.config();
 
 const app = express();
@@ -287,17 +297,6 @@ app.post("/api/formulario", express.json(), async (req, res) => {
   }
 });
 
-// Interações dos botões
-import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
-  EmbedBuilder
-} from "discord.js";
-
 bot.on("interactionCreate", async (interaction) => {
   try {
     // ==================== BOTÕES ====================
@@ -386,6 +385,7 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
