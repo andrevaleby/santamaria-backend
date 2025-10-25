@@ -8,17 +8,21 @@ import cors from "cors";
 import pkg from "pg";
 const { Pool } = pkg;
 
+// ✅ Importa TUDO do Discord.js aqui (só uma vez)
 import {
+  Client,
+  GatewayIntentBits,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  EmbedBuilder,
   ModalBuilder,
   TextInputBuilder,
-  TextInputStyle,
-  EmbedBuilder
+  TextInputStyle
 } from "discord.js";
 
 dotenv.config();
+
 
 const app = express();
 app.use(express.static("public"));
@@ -233,13 +237,21 @@ app.post("/api/logout", (req, res) => {
 
 // Inicializa o bot
 // ✅ Criar cliente do Discord
+// ✅ Criar instância do bot
 const bot = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+});
+
+bot.user.setPresence({
+  activities: [{ name: process.env.BOT_STATUS, type: 1 }],
+  status: "online"
 });
 
 bot.once("ready", () => {
   console.log(`🤖 Bot logado como ${bot.user.tag}`);
 });
+
+bot.login(process.env.DISCORD_TOKEN);
 
 // Endpoint do formulário
 app.post("/api/formulario", express.json(), async (req, res) => {
@@ -384,6 +396,7 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
