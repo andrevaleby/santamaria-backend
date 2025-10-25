@@ -16,10 +16,11 @@ app.use(cookieParser());
 
 // ✅ CORS — permitir frontend da Hostinger
 app.use(cors({
-  origin: 'https://testes.andredevhub.com',
-  credentials: true
+  origin: ["https://testes.andredevhub.com"],
+  credentials: true,
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
-
 
 // ✅ BANCO (Render)
 const pool = new Pool({
@@ -29,27 +30,42 @@ const pool = new Pool({
 
 // ✅ Garantir tabela de usuários
 (async () => {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      discord_id VARCHAR(50) UNIQUE,
-      username VARCHAR(100),
-      avatar VARCHAR(200),
-      discriminator VARCHAR(10),
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-  `);
-
-  // ✅ garante que a coluna exista
-  await pool.query(`
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS esta_no_servidor BOOLEAN DEFAULT false;
-  `);
-
-  console.log("✅ Tabela 'users' verificada e atualizada");
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        discord_id VARCHAR(50) UNIQUE,
+        username VARCHAR(100),
+        avatar VARCHAR(200),
+        discriminator VARCHAR(10),
+        esta_no_servidor BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    console.log("✅ Tabela 'users' verificada e atualizada");
+  } catch (err) {
+    console.error("❌ Erro ao verificar tabela:", err);
+  }
 })();
 
 const generateState = () => crypto.randomBytes(16).toString("hex");
+
+// ✅ Middleware de autenticação
+const authMiddleware = (req, res, next) => {
+  const token = req.cookies.user;
+  if (!token) return res.status(401).json({ error: "Não autenticado" });
+
+  try {
+    const user = jwt.verify(token, process.env.JWT_SECRET, {
+      issuer: "santamariaRP",
+      audience: "frontend"
+    });
+    req.user = user;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: "Token inválido" });
+  }
+};
 
 // ✅ LOGIN COM DISCORD
 app.get("/api/auth/discord", (req, res) => {
@@ -74,6 +90,9 @@ app.get("/api/auth/discord/callback", async (req, res) => {
   const { code, state } = req.query;
   const savedState = req.cookies.oauth_state;
   if (!state || state !== savedState) return res.status(400).send("Invalid state");
+
+  // Limpa o cookie de state
+  res.clearCookie("oauth_state");
 
   try {
     // Trocar código por token
@@ -111,21 +130,29 @@ app.get("/api/auth/discord/callback", async (req, res) => {
     const estaNoServidor = guilds.some(g => g.id === "1299085549256310924");
 
     // Salvar no banco
-    await pool.query(`
-      INSERT INTO users (discord_id, username, avatar, discriminator, esta_no_servidor)
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (discord_id) DO UPDATE SET
-        username = EXCLUDED.username,
-        avatar = EXCLUDED.avatar,
-        discriminator = EXCLUDED.discriminator,
-        esta_no_servidor = EXCLUDED.esta_no_servidor;
-    `, [user.id, user.username, user.avatar, user.discriminator, estaNoServidor]);
+    try {
+      await pool.query(`
+        INSERT INTO users (discord_id, username, avatar, discriminator, esta_no_servidor)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (discord_id) DO UPDATE SET
+          username = EXCLUDED.username,
+          avatar = EXCLUDED.avatar,
+          discriminator = EXCLUDED.discriminator,
+          esta_no_servidor = EXCLUDED.esta_no_servidor;
+      `, [user.id, user.username, user.avatar, user.discriminator, estaNoServidor]);
+    } catch (err) {
+      console.error("❌ Erro ao salvar usuário:", err);
+    }
 
     // Criar JWT
     const jwtToken = jwt.sign(
       { ...user, estaNoServidor },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      {
+        expiresIn: "1h",
+        issuer: "santamariaRP",
+        audience: "frontend"
+      }
     );
 
     res.cookie("user", jwtToken, {
@@ -169,22 +196,12 @@ app.get("/api/auth/discord/callback", async (req, res) => {
   }
 });
 
-
-
 // ✅ ROTA /api/me — usada no frontend da Hostinger
-app.get("/api/me", (req, res) => {
-  const token = req.cookies.user;
-  if (!token) return res.status(401).json({ error: "Não autenticado" });
-
-  try {
-    const user = jwt.verify(token, process.env.JWT_SECRET);
-    res.json(user);
-  } catch {
-    res.status(401).json({ error: "Token inválido" });
-  }
+app.get("/api/me", authMiddleware, (req, res) => {
+  res.json(req.user);
 });
 
-// ✅ ROTA DE LOGOUT
+// ✅ ROTA DE LOGOUT (GET)
 app.get("/api/logout", (req, res) => {
   res.clearCookie("user", {
     httpOnly: true,
@@ -194,16 +211,18 @@ app.get("/api/logout", (req, res) => {
   res.redirect("https://testes.andredevhub.com/suaconta.html");
 });
 
-app.post('/api/logout', (req, res) => {
-  res.clearCookie('user', {
+// ✅ ROTA DE LOGOUT (POST)
+app.post("/api/logout", (req, res) => {
+  res.clearCookie("user", {
     httpOnly: true,
-    sameSite: 'none',
-    secure: true
+    secure: true,
+    sameSite: "none",
   });
-  res.status(200).json({ message: 'Logout realizado com sucesso.' });
+  res.status(200).json({ message: "Logout realizado com sucesso." });
 });
 
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
