@@ -271,11 +271,11 @@ app.post("/api/formulario", express.json(), async (req, res) => {
     const buttons = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`aprovar_${id}`)
-        .setLabel("✅ Aprovar")
+        .setLabel("Aprovar")
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
         .setCustomId(`reprovar_${id}`)
-        .setLabel("❌ Reprovar")
+        .setLabel("Reprovar")
         .setStyle(ButtonStyle.Danger)
     );
 
@@ -299,16 +299,60 @@ bot.on("interactionCreate", async (interaction) => {
   } else if (interaction.customId.startsWith("reprovar_")) {
     const canalReprovado = await bot.channels.fetch(process.env.REPROV_CHANNEL_ID);
     await canalReprovado.send(`❌ **${id} foi reprovado.**`);
-    await interaction.reply({ content: `❌ Reprovado com sucesso!`, ephemeral: true });
+    await interaction.reply({ content: `❌ Reprovado com sucesso! 😭`, ephemeral: true });
   }
 });
 
 bot.login(process.env.BOT_TOKEN);
 
+import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from "discord.js";
+
+bot.on("interactionCreate", async (interaction) => {
+  if (interaction.isButton()) {
+    const discordId = interaction.customId.split("_")[1];
+    const acao = interaction.customId.split("_")[0]; // "aprovar" ou "reprovar"
+
+    // Cria modal para digitar o motivo
+    const modal = new ModalBuilder()
+      .setCustomId(`${acao}_modal_${discordId}`)
+      .setTitle(acao === "aprovar" ? "Motivo da Aprovação" : "Motivo da Reprovação");
+
+    const motivoInput = new TextInputBuilder()
+      .setCustomId("motivo")
+      .setLabel("Digite o motivo")
+      .setStyle(TextInputStyle.Paragraph)
+      .setRequired(true);
+
+    const row = new ActionRowBuilder().addComponents(motivoInput);
+    modal.addComponents(row);
+
+    await interaction.showModal(modal);
+  }
+
+  // Quando o staff envia o modal
+  if (interaction.isModalSubmit()) {
+    const customIdParts = interaction.customId.split("_modal_");
+    const acao = customIdParts[0]; // aprovar ou reprovar
+    const discordId = customIdParts[1];
+
+    const motivo = interaction.fields.getTextInputValue("motivo");
+
+    // Define qual canal enviar
+    const canal = acao === "aprovar"
+      ? await bot.channels.fetch(process.env.APPROV_CHANNEL_ID)
+      : await bot.channels.fetch(process.env.REPROV_CHANNEL_ID);
+
+    await canal.send(`**ID do Discord:** ${discordId}\n**Ação:** ${acao === "aprovar" ? "Aprovado ✅" : "Reprovado ❌"}\n**Motivo:** ${motivo}`);
+    
+    await interaction.reply({ content: "✅ Ação registrada com motivo!", ephemeral: true });
+  }
+});
+
 
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
