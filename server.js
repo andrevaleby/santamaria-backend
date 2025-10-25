@@ -1,3 +1,4 @@
+// 1️⃣ Imports
 import express from "express";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
@@ -10,6 +11,27 @@ const { Pool } = pkg;
 import { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
 
 dotenv.config();
+
+// 2️⃣ Criar instância do bot — apenas uma vez
+const bot = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+});
+
+// 3️⃣ Evento ready
+bot.once("ready", () => {
+  console.log(`🤖 Bot logado como ${bot.user.tag}`);
+
+  bot.user.setPresence({
+    activities: [{ name: "Santa Maria RP", type: 3 }], // Assistindo
+    status: "online"
+  });
+
+  console.log("👀 Status definido: Assistindo Santa Maria RP");
+});
+
+// 4️⃣ Login
+bot.login(process.env.DISCORD_TOKEN);
+
 
 const app = express();
 app.use(express.static("public"));
@@ -222,27 +244,6 @@ app.post("/api/logout", (req, res) => {
   res.status(200).json({ message: "Logout realizado com sucesso." });
 });
 
-// Inicializa o bot
-const bot = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
-});
-
-bot.once("ready", () => {
-  console.log(`🤖 Bot logado como ${bot.user.tag}`);
-bot.user.setPresence({
-  activities: [{ name: process.env.BOT_STATUS, type: 1 }],
-  status: "online"
-  });
-});
-
-bot.login(process.env.DISCORD_TOKEN);
-
-
-const bot = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
-});
-
-
 // Endpoint do formulário
 app.post("/api/formulario", express.json(), async (req, res) => {
   try {
@@ -386,6 +387,7 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
