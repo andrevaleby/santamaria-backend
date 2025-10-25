@@ -221,8 +221,81 @@ app.post("/api/logout", (req, res) => {
   res.status(200).json({ message: "Logout realizado com sucesso." });
 });
 
+// ====== BOT + FORMULÁRIO DISCORD ======
+import { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
+
+// Inicializa o bot
+const bot = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
+});
+
+bot.once("ready", () => {
+  console.log(`🤖 Bot logado como ${bot.user.tag}`);
+});
+
+// Endpoint que recebe o formulário
+app.post("/api/formulario", express.json(), async (req, res) => {
+  try {
+    const { nome, motivo } = req.body;
+    if (!nome || !motivo) {
+      return res.status(400).json({ message: "Campos inválidos" });
+    }
+
+    const logChannel = await bot.channels.fetch(process.env.LOG_CHANNEL_ID);
+
+    const embed = new EmbedBuilder()
+      .setTitle("📋 Novo Formulário Recebido")
+      .addFields(
+        { name: "👤 Nome", value: nome, inline: true },
+        { name: "📝 Motivo", value: motivo, inline: false }
+      )
+      .setColor(0x5865F2)
+      .setTimestamp();
+
+    const buttons = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`aprovar_${nome}`)
+        .setLabel("✅ Aprovar")
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`reprovar_${nome}`)
+        .setLabel("❌ Reprovar")
+        .setStyle(ButtonStyle.Danger)
+    );
+
+    await logChannel.send({ embeds: [embed], components: [buttons] });
+    res.json({ message: "Formulário enviado com sucesso!" });
+  } catch (err) {
+    console.error("❌ Erro ao processar formulário:", err);
+    res.status(500).json({ message: "Erro interno ao enviar formulário" });
+  }
+});
+
+// Evento dos botões
+bot.on("interactionCreate", async (interaction) => {
+  if (!interaction.isButton()) return;
+
+  const nome = interaction.customId.split("_")[1];
+
+  if (interaction.customId.startsWith("aprovar_")) {
+    const canalAprovado = await bot.channels.fetch(process.env.APPROV_CHANNEL_ID);
+    await canalAprovado.send(`✅ **${nome} foi aprovado!**`);
+    await interaction.reply({ content: `✅ Aprovado com sucesso!`, ephemeral: true });
+  } else if (interaction.customId.startsWith("reprovar_")) {
+    const canalReprovado = await bot.channels.fetch(process.env.REPROV_CHANNEL_ID);
+    await canalReprovado.send(`❌ **${nome} foi reprovado.**`);
+    await interaction.reply({ content: `❌ Reprovado com sucesso!`, ephemeral: true });
+  }
+});
+
+// Login do bot
+bot.login(process.env.BOT_TOKEN);
+// ====== FIM BOT + FORMULÁRIO ======
+
+
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
