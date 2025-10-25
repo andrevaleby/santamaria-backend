@@ -236,19 +236,16 @@ app.post("/api/logout", (req, res) => {
 });
 
 // Inicializa o bot
-// ✅ Criar cliente do Discord
-// ✅ Criar instância do bot
-const bot = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
-});
-
-bot.user.setPresence({
-  activities: [{ name: process.env.BOT_STATUS, type: 1 }],
-  status: "online"
-});
-
 bot.once("ready", () => {
   console.log(`🤖 Bot logado como ${bot.user.tag}`);
+
+  // ✅ Define o status do bot
+  bot.user.setPresence({
+    activities: [{ name: "Santa Maria RP", type: 1 }], 
+    status: "invisible" 
+  });
+
+  console.log("👀 Status definido: Assistindo Santa Maria RP");
 });
 
 bot.login(process.env.DISCORD_TOKEN);
@@ -396,6 +393,7 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
