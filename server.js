@@ -305,46 +305,44 @@ bot.on("interactionCreate", async (interaction) => {
 
 bot.login(process.env.BOT_TOKEN);
 
-import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } from "discord.js";
-
 bot.on("interactionCreate", async (interaction) => {
-  if (interaction.isButton()) {
-    const discordId = interaction.customId.split("_")[1];
-    const acao = interaction.customId.split("_")[0]; // "aprovar" ou "reprovar"
+  try {
+    // Botão clicado → abrir modal para motivo
+    if (interaction.isButton()) {
+      const discordId = interaction.customId.split("_")[1];
+      const acao = interaction.customId.split("_")[0]; // "aprovar" ou "reprovar"
 
-    // Cria modal para digitar o motivo
-    const modal = new ModalBuilder()
-      .setCustomId(`${acao}_modal_${discordId}`)
-      .setTitle(acao === "aprovar" ? "Motivo da Aprovação" : "Motivo da Reprovação");
+      const modal = new ModalBuilder()
+        .setCustomId(`${acao}_modal_${discordId}`)
+        .setTitle(acao === "aprovar" ? "Motivo da Aprovação" : "Motivo da Reprovação");
 
-    const motivoInput = new TextInputBuilder()
-      .setCustomId("motivo")
-      .setLabel("Digite o motivo")
-      .setStyle(TextInputStyle.Paragraph)
-      .setRequired(true);
+      const motivoInput = new TextInputBuilder()
+        .setCustomId("motivo")
+        .setLabel("Digite o motivo")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true);
 
-    const row = new ActionRowBuilder().addComponents(motivoInput);
-    modal.addComponents(row);
+      const row = new ActionRowBuilder().addComponents(motivoInput);
+      modal.addComponents(row);
 
-    await interaction.showModal(modal);
-  }
+      await interaction.showModal(modal);
+    }
 
-  // Quando o staff envia o modal
-  if (interaction.isModalSubmit()) {
-    const customIdParts = interaction.customId.split("_modal_");
-    const acao = customIdParts[0]; // aprovar ou reprovar
-    const discordId = customIdParts[1];
+    // Modal enviado → enviar motivo para o canal correto
+    if (interaction.isModalSubmit()) {
+      const [acao, , discordId] = interaction.customId.split("_modal_");
+      const motivo = interaction.fields.getTextInputValue("motivo");
 
-    const motivo = interaction.fields.getTextInputValue("motivo");
+      const canal = acao === "aprovar"
+        ? await bot.channels.fetch(process.env.APPROV_CHANNEL_ID)
+        : await bot.channels.fetch(process.env.REPROV_CHANNEL_ID);
 
-    // Define qual canal enviar
-    const canal = acao === "aprovar"
-      ? await bot.channels.fetch(process.env.APPROV_CHANNEL_ID)
-      : await bot.channels.fetch(process.env.REPROV_CHANNEL_ID);
+      await canal.send(`**ID do Discord:** ${discordId}\n**Ação:** ${acao === "aprovar" ? "Aprovado ✅" : "Reprovado ❌"}\n**Motivo:** ${motivo}`);
 
-    await canal.send(`**ID do Discord:** ${discordId}\n**Ação:** ${acao === "aprovar" ? "Aprovado ✅" : "Reprovado ❌"}\n**Motivo:** ${motivo}`);
-    
-    await interaction.reply({ content: "✅ Ação registrada com motivo!", ephemeral: true });
+      await interaction.reply({ content: "✅ Ação registrada com motivo!", ephemeral: true });
+    }
+  } catch (err) {
+    console.error("❌ Erro na interação do Discord:", err);
   }
 });
 
@@ -352,6 +350,7 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
