@@ -288,23 +288,6 @@ app.post("/api/formulario", express.json(), async (req, res) => {
 });
 
 // Interações dos botões
-bot.on("interactionCreate", async (interaction) => {
-  if (!interaction.isButton()) return;
-  const id = interaction.customId.split("_")[1];
-
-  if (interaction.customId.startsWith("aprovar_")) {
-    const canalAprovado = await bot.channels.fetch(process.env.APPROV_CHANNEL_ID);
-    await canalAprovado.send(`✅ **${id} foi aprovado!**`);
-    await interaction.reply({ content: `✅ Aprovado com sucesso!`, ephemeral: true });
-  } else if (interaction.customId.startsWith("reprovar_")) {
-    const canalReprovado = await bot.channels.fetch(process.env.REPROV_CHANNEL_ID);
-    await canalReprovado.send(`❌ **${id} foi reprovado.**`);
-    await interaction.reply({ content: `❌ Reprovado com sucesso! 😭`, ephemeral: true });
-  }
-});
-
-bot.login(process.env.BOT_TOKEN);
-
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -399,8 +382,11 @@ bot.on("interactionCreate", async (interaction) => {
 });
 
 
+
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
+
 
 
