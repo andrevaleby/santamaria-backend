@@ -7,22 +7,10 @@ import crypto from "crypto";
 import cors from "cors";
 import pkg from "pg";
 const { Pool } = pkg;
-
-// ✅ Importa TUDO do Discord.js aqui (só uma vez)
-import {
-  Client,
-  GatewayIntentBits,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  EmbedBuilder,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle
-} from "discord.js";
+import { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
+import express from "express";
 
 dotenv.config();
-
 
 const app = express();
 app.use(express.static("public"));
@@ -239,16 +227,24 @@ app.post("/api/logout", (req, res) => {
 bot.once("ready", () => {
   console.log(`🤖 Bot logado como ${bot.user.tag}`);
 
-  // ✅ Define o status do bot
+ bot.once("ready", () => {
+  console.log(`🤖 Bot logado como ${bot.user.tag}`);
+
   bot.user.setPresence({
-    activities: [{ name: "Santa Maria RP", type: 1 }], 
-    status: "invisible" 
+    activities: [{ name: "Santa Maria RP", type: 1 }], // Assistindo
+    status: "online"
   });
 
   console.log("👀 Status definido: Assistindo Santa Maria RP");
 });
 
+
 bot.login(process.env.DISCORD_TOKEN);
+
+const bot = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+});
+
 
 // Endpoint do formulário
 app.post("/api/formulario", express.json(), async (req, res) => {
@@ -393,6 +389,7 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
