@@ -305,11 +305,11 @@ bot.on("interactionCreate", async (interaction) => {
 
 bot.login(process.env.BOT_TOKEN);
 
+// Bot já inicializado
 bot.on("interactionCreate", async (interaction) => {
   try {
-    // 1️⃣ Botão clicado
     if (interaction.isButton()) {
-      const [acao, discordId] = interaction.customId.split("_"); // ex: "aprovar_123456"
+      const [acao, discordId] = interaction.customId.split("_");
 
       const modal = new ModalBuilder()
         .setCustomId(`${acao}_modal_${discordId}`)
@@ -324,11 +324,10 @@ bot.on("interactionCreate", async (interaction) => {
       const row = new ActionRowBuilder().addComponents(motivoInput);
       modal.addComponents(row);
 
-      // Mostra o modal para o usuário que clicou
+      // Mostra o modal
       await interaction.showModal(modal);
     }
 
-    // 2️⃣ Modal enviado
     if (interaction.isModalSubmit()) {
       const [acao, , discordId] = interaction.customId.split("_modal_");
       const motivo = interaction.fields.getTextInputValue("motivo");
@@ -338,14 +337,15 @@ bot.on("interactionCreate", async (interaction) => {
         : await bot.channels.fetch(process.env.REPROV_CHANNEL_ID);
 
       await canal.send(`**ID do Discord:** ${discordId}\n**Ação:** ${acao === "aprovar" ? "Aprovado ✅" : "Reprovado ❌"}\n**Motivo:** ${motivo}`);
-
-      await interaction.reply({ content: "✅ Ação registrada com motivo!", ephemeral: true });
+      await interaction.reply({ content: "✅ Ação registrada!", ephemeral: true });
     }
   } catch (err) {
-    console.error("❌ Erro na interação do Discord:", err);
+    console.error(err);
   }
 });
+
 
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
