@@ -307,10 +307,9 @@ bot.login(process.env.BOT_TOKEN);
 
 bot.on("interactionCreate", async (interaction) => {
   try {
-    // Botão clicado → abrir modal para motivo
+    // 1️⃣ Botão clicado
     if (interaction.isButton()) {
-      const discordId = interaction.customId.split("_")[1];
-      const acao = interaction.customId.split("_")[0]; // "aprovar" ou "reprovar"
+      const [acao, discordId] = interaction.customId.split("_"); // ex: "aprovar_123456"
 
       const modal = new ModalBuilder()
         .setCustomId(`${acao}_modal_${discordId}`)
@@ -325,10 +324,11 @@ bot.on("interactionCreate", async (interaction) => {
       const row = new ActionRowBuilder().addComponents(motivoInput);
       modal.addComponents(row);
 
+      // Mostra o modal para o usuário que clicou
       await interaction.showModal(modal);
     }
 
-    // Modal enviado → enviar motivo para o canal correto
+    // 2️⃣ Modal enviado
     if (interaction.isModalSubmit()) {
       const [acao, , discordId] = interaction.customId.split("_modal_");
       const motivo = interaction.fields.getTextInputValue("motivo");
@@ -346,18 +346,6 @@ bot.on("interactionCreate", async (interaction) => {
   }
 });
 
-
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
-
-
-
-
-
-
-
-
-
-
-
