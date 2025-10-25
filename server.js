@@ -221,10 +221,9 @@ app.post("/api/logout", (req, res) => {
   res.status(200).json({ message: "Logout realizado com sucesso." });
 });
 
-// ====== BOT + FORMULÁRIO DISCORD ======
+// ====== FORMULÁRIO USANDO LOGIN DISCORD ======
 import { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from "discord.js";
 
-// Inicializa o bot
 const bot = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
@@ -233,32 +232,57 @@ bot.once("ready", () => {
   console.log(`🤖 Bot logado como ${bot.user.tag}`);
 });
 
-// Endpoint que recebe o formulário
-app.post("/api/formulario", express.json(), async (req, res) => {
-  try {
-    const { nome, motivo } = req.body;
-    if (!nome || !motivo) {
-      return res.status(400).json({ message: "Campos inválidos" });
-    }
+// Middleware para verificar usuário autenticado via cookie JWT
+const authMiddleware = (req, res, next) => {
+  const token = req.cookies.user;
+  if (!token) return res.status(401).json({ error: "Não autenticado" });
 
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    return res.status(401).json({ error: "Token inválido" });
+  }
+};
+
+// Recebe o formulário
+app.post("/api/formulario", authMiddleware, express.json(), async (req, res) => {
+  try {
+    const { idade, motivo, experiencia, conflito, cargo, microfone } = req.body;
+    if (!idade || !motivo || !experiencia || !conflito || !cargo || !microfone)
+      return res.status(400).json({ message: "Preencha todos os campos." });
+
+    const { username, id, avatar } = req.user;
     const logChannel = await bot.channels.fetch(process.env.LOG_CHANNEL_ID);
+
+    const avatarURL = avatar
+      ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`
+      : "https://cdn.discordapp.com/embed/avatars/0.png";
 
     const embed = new EmbedBuilder()
       .setTitle("📋 Novo Formulário Recebido")
+      .setThumbnail(avatarURL)
       .addFields(
-        { name: "👤 Nome", value: nome, inline: true },
-        { name: "📝 Motivo", value: motivo, inline: false }
+        { name: "👤 Usuário", value: username, inline: true },
+        { name: "🆔 ID Discord", value: id, inline: true },
+        { name: "🎂 Idade", value: idade.toString(), inline: true },
+        { name: "💬 Motivo", value: motivo, inline: false },
+        { name: "📜 Experiência", value: experiencia, inline: false },
+        { name: "⚖️ Conflito RP", value: conflito, inline: false },
+        { name: "🎯 Cargo Desejado", value: cargo, inline: true },
+        { name: "🎙️ Microfone", value: microfone, inline: true }
       )
       .setColor(0x5865F2)
+      .setFooter({ text: "Santa Maria RP — Formulário de Aplicação" })
       .setTimestamp();
 
     const buttons = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`aprovar_${nome}`)
+        .setCustomId(`aprovar_${id}`)
         .setLabel("✅ Aprovar")
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
-        .setCustomId(`reprovar_${nome}`)
+        .setCustomId(`reprovar_${id}`)
         .setLabel("❌ Reprovar")
         .setStyle(ButtonStyle.Danger)
     );
@@ -271,31 +295,31 @@ app.post("/api/formulario", express.json(), async (req, res) => {
   }
 });
 
-// Evento dos botões
+// Quando clicam nos botões
 bot.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
-
-  const nome = interaction.customId.split("_")[1];
+  const id = interaction.customId.split("_")[1];
 
   if (interaction.customId.startsWith("aprovar_")) {
     const canalAprovado = await bot.channels.fetch(process.env.APPROV_CHANNEL_ID);
-    await canalAprovado.send(`✅ **${nome} foi aprovado!**`);
+    await canalAprovado.send(`✅ **${id} foi aprovado!**`);
     await interaction.reply({ content: `✅ Aprovado com sucesso!`, ephemeral: true });
   } else if (interaction.customId.startsWith("reprovar_")) {
     const canalReprovado = await bot.channels.fetch(process.env.REPROV_CHANNEL_ID);
-    await canalReprovado.send(`❌ **${nome} foi reprovado.**`);
+    await canalReprovado.send(`❌ **${id} foi reprovado.**`);
     await interaction.reply({ content: `❌ Reprovado com sucesso!`, ephemeral: true });
   }
 });
 
-// Login do bot
 bot.login(process.env.BOT_TOKEN);
-// ====== FIM BOT + FORMULÁRIO ======
+// ====== FIM FORMULÁRIO ======
+
 
 
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
