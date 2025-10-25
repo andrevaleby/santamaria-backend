@@ -8,7 +8,6 @@ import cors from "cors";
 import pkg from "pg";
 const { Pool } = pkg;
 import { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
-import express from "express";
 
 dotenv.config();
 
@@ -224,22 +223,20 @@ app.post("/api/logout", (req, res) => {
 });
 
 // Inicializa o bot
-bot.once("ready", () => {
-  console.log(`🤖 Bot logado como ${bot.user.tag}`);
-
- bot.once("ready", () => {
-  console.log(`🤖 Bot logado como ${bot.user.tag}`);
-
-  bot.user.setPresence({
-    activities: [{ name: "Santa Maria RP", type: 1 }], // Assistindo
-    status: "online"
-  });
-
-  console.log("👀 Status definido: Assistindo Santa Maria RP");
+const bot = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
 });
 
+bot.once("ready", () => {
+  console.log(`🤖 Bot logado como ${bot.user.tag}`);
+bot.user.setPresence({
+  activities: [{ name: process.env.BOT_STATUS, type: 1 }],
+  status: "online"
+  });
+});
 
 bot.login(process.env.DISCORD_TOKEN);
+
 
 const bot = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
@@ -389,6 +386,7 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
