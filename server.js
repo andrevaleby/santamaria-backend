@@ -252,20 +252,20 @@ app.post("/api/formulario", express.json(), async (req, res) => {
       : "https://cdn.discordapp.com/embed/avatars/0.png";
 
     const embed = new EmbedBuilder()
-      .setTitle("📋 Novo Formulário Recebido")
+      .setTitle("📋 Nova WhiteList Recebida")
       .setThumbnail(avatarURL)
       .addFields(
         { name: "👤 Usuário", value: username, inline: true },
         { name: "🆔 ID Discord", value: id, inline: true },
-        { name: "1️⃣ Pergunta", value: resposta1 || "-", inline: false },
-        { name: "2️⃣ Pergunta", value: resposta2 || "-", inline: false },
-        { name: "3️⃣ Pergunta", value: resposta3 || "-", inline: false },
-        { name: "4️⃣ Pergunta", value: resposta4 || "-", inline: false },
-        { name: "5️⃣ Pergunta", value: resposta5 || "-", inline: false },
-        { name: "6️⃣ Pergunta", value: resposta6 || "-", inline: false }
+        { name: "🆔 ID Roblox", value: resposta1 || "-", inline: false },
+        { name: "👤 Nome do Roblox", value: resposta2 || "-", inline: false },
+        { name: "🌍 Em que país moras?", value: resposta3 || "-", inline: false },
+        { name: "🎂 Qual é sua idade real?", value: resposta4 || "-", inline: false },
+        { name: "🎮 Você joga no PC?", value: resposta5 || "-", inline: false },
+        { name: "🎧 Você tem microfone?", value: resposta6 || "-", inline: false }
       )
       .setColor(0x5865F2)
-      .setFooter({ text: "Santa Maria RP — Formulário" })
+      .setFooter({ text: "Painel de Froms - © Santa Maria RP" })
       .setTimestamp();
 
     const buttons = new ActionRowBuilder().addComponents(
@@ -309,6 +309,7 @@ bot.login(process.env.BOT_TOKEN);
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
