@@ -298,37 +298,33 @@ app.post("/api/formulario", express.json(), async (req, res) => {
   }
 });
 
+// Mapa para controlar quem já foi processado
+const usuariosProcessados = new Map();
+
 bot.on("interactionCreate", async (interaction) => {
   try {
     // ==================== BOTÕES ====================
     if (interaction.isButton()) {
       const [acao, discordId] = interaction.customId.split("_");
 
-      const msgOriginal = await interaction.message.fetch();
-      const embedOriginal = msgOriginal.embeds[0];
+      if (!acao || !discordId) return;
 
-      const jaProcessada =
-        embedOriginal?.footer?.text?.includes("aprovada") ||
-        embedOriginal?.footer?.text?.includes("reprovada");
-
-      if (jaProcessada) {
-        const statusAnterior = embedOriginal.footer.text.includes("aprovada")
-          ? "aprovou"
-          : "reprovou";
-
+      // Verifica se já foi processado
+      if (usuariosProcessados.has(discordId)) {
         await interaction.reply({
-          content: `⚠️ Você já ${statusAnterior} este usuário!`,
+          content: `⚠️ Você já ${usuariosProcessados.get(discordId)} este usuário!`,
           ephemeral: true,
         });
         return;
       }
 
-      // Cria modal e armazena o ID da mensagem
+      // Marca como "em processo" para evitar abrir múltiplos modais
+      usuariosProcessados.set(discordId, acao === "aprovar" ? "aprovou" : "reprovou");
+
+      // Cria modal e passa ID da mensagem
       const modal = new ModalBuilder()
-        .setCustomId(`modal_${acao}_${discordId}_${msgOriginal.id}`)
-        .setTitle(
-          acao === "aprovar" ? "Motivo da Aprovação" : "Motivo da Reprovação"
-        );
+        .setCustomId(`modal_${acao}_${discordId}_${interaction.message.id}`)
+        .setTitle(acao === "aprovar" ? "Motivo da Aprovação" : "Motivo da Reprovação");
 
       const motivoInput = new TextInputBuilder()
         .setCustomId("motivo")
@@ -345,7 +341,6 @@ bot.on("interactionCreate", async (interaction) => {
       const [_, acao, discordId, mensagemId] = interaction.customId.split("_");
 
       if (!acao || !discordId || !mensagemId) {
-        console.error("❌ Erro: customId do modal inválido:", interaction.customId);
         await interaction.reply({
           content: "⚠️ Erro interno ao processar o modal.",
           ephemeral: true,
@@ -431,12 +426,10 @@ bot.on("interactionCreate", async (interaction) => {
 });
 
 
-
-
-
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
