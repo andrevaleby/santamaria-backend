@@ -10,8 +10,6 @@ import pkg from "pg";
 const { Pool } = pkg;
 import { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
 
-const usuariosProcessados = new Map();
-
 // 2️⃣ Criar instância do bot — apenas uma vez
 const bot = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
@@ -303,9 +301,6 @@ app.post("/api/formulario", express.json(), async (req, res) => {
 // Mapa para controlar quem já foi processado
 const usuariosProcessados = new Map();
 
-// Mapa para controlar quem já foi processado
-const usuariosProcessados = new Map();
-
 bot.on("interactionCreate", async (interaction) => {
   try {
     // ==================== BOTÕES ====================
@@ -326,7 +321,7 @@ bot.on("interactionCreate", async (interaction) => {
       // Marca como "em processo" para evitar abrir múltiplos modais
       usuariosProcessados.set(discordId, acao === "aprovar" ? "aprovou" : "reprovou");
 
-      // Cria modal com ID da mensagem original
+      // Cria modal e passa ID da mensagem
       const modal = new ModalBuilder()
         .setCustomId(`modal_${acao}_${discordId}_${interaction.message.id}`)
         .setTitle(acao === "aprovar" ? "Motivo da Aprovação" : "Motivo da Reprovação");
@@ -338,7 +333,6 @@ bot.on("interactionCreate", async (interaction) => {
         .setRequired(true);
 
       modal.addComponents(new ActionRowBuilder().addComponents(motivoInput));
-
       await interaction.showModal(modal);
     }
 
@@ -371,7 +365,7 @@ bot.on("interactionCreate", async (interaction) => {
 
       const embedOriginal = msgOriginal.embeds[0];
 
-      // Canal de destino
+      // Canal de destino (aprovado/reprovado)
       const canalDestino =
         acao === "aprovar"
           ? await bot.channels.fetch(process.env.APPROV_CHANNEL_ID)
@@ -396,7 +390,7 @@ bot.on("interactionCreate", async (interaction) => {
 
       await canalDestino.send({ embeds: [resultadoEmbed] });
 
-      // Edita mensagem original (remove botões e marca status)
+      // Edita a mensagem original (remove botões e marca status)
       const novoEmbed = EmbedBuilder.from(embedOriginal)
         .setColor(acao === "aprovar" ? 0x57f287 : 0xed4245)
         .setFooter({
@@ -431,30 +425,7 @@ bot.on("interactionCreate", async (interaction) => {
   }
 });
 
+
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
