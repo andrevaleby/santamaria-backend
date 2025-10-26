@@ -15,19 +15,19 @@ const bot = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
 });
 
-// 3️⃣ Evento ready
+
 bot.once("ready", () => {
   console.log(`🤖 Bot logado como ${bot.user.tag}`);
 
-  bot.user.setPresence({
-    activities: [{ name: "Santa Maria RP", type: 3 }], // Assistindo
-    status: "online"
-  });
-
-  console.log("👀 Status definido: Assistindo Santa Maria RP");
+ bot.user.setPresence({
+  activities: [{ name: process.env.BOT_STATUS, type: 0 }],
+  status: "invisible"
 });
 
-// 4️⃣ Login
+  console.log("Status definido: Assistindo Santa Maria RP");
+});
+
+
 console.log("Token lido do .env:", process.env.DISCORD_TOKEN);
 bot.login(process.env.DISCORD_TOKEN);
 
@@ -386,6 +386,7 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
