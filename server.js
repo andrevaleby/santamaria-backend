@@ -301,8 +301,6 @@ app.post("/api/formulario", express.json(), async (req, res) => {
 // Mapa para controlar quem já foi processado
 const usuariosProcessados = new Map();
 
-const usuariosProcessados = new Map(); // Deve estar no escopo global do bot
-
 bot.on("interactionCreate", async (interaction) => {
   try {
     // ==================== BOTÕES ====================
@@ -430,4 +428,5 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
