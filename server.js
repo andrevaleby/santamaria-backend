@@ -301,6 +301,8 @@ app.post("/api/formulario", express.json(), async (req, res) => {
 // Mapa para controlar quem já foi processado
 const usuariosProcessados = new Map();
 
+const usuariosProcessados = new Map(); // Deve estar no escopo global do bot
+
 bot.on("interactionCreate", async (interaction) => {
   try {
     // ==================== BOTÕES ====================
@@ -318,10 +320,10 @@ bot.on("interactionCreate", async (interaction) => {
         return;
       }
 
-      // Marca como "em processo" para evitar abrir múltiplos modais
+      // Marca como "em processo"
       usuariosProcessados.set(discordId, acao === "aprovar" ? "aprovou" : "reprovou");
 
-      // Cria modal e passa ID da mensagem
+      // Cria modal
       const modal = new ModalBuilder()
         .setCustomId(`modal_${acao}_${discordId}_${interaction.message.id}`)
         .setTitle(acao === "aprovar" ? "Motivo da Aprovação" : "Motivo da Reprovação");
@@ -338,12 +340,13 @@ bot.on("interactionCreate", async (interaction) => {
 
     // ==================== MODAL ENVIADO ====================
     if (interaction.isModalSubmit()) {
+      await interaction.deferReply({ ephemeral: true }); // <-- adicionado
+
       const [_, acao, discordId, mensagemId] = interaction.customId.split("_");
 
       if (!acao || !discordId || !mensagemId) {
-        await interaction.reply({
+        await interaction.editReply({
           content: "⚠️ Erro interno ao processar o modal.",
-          ephemeral: true,
         });
         return;
       }
@@ -356,22 +359,21 @@ bot.on("interactionCreate", async (interaction) => {
       try {
         msgOriginal = await interaction.channel.messages.fetch(mensagemId);
       } catch {
-        await interaction.reply({
+        await interaction.editReply({
           content: "⚠️ Mensagem original não encontrada (talvez apagada).",
-          ephemeral: true,
         });
         return;
       }
 
       const embedOriginal = msgOriginal.embeds[0];
 
-      // Canal de destino (aprovado/reprovado)
+      // Canal de destino
       const canalDestino =
         acao === "aprovar"
           ? await bot.channels.fetch(process.env.APPROV_CHANNEL_ID)
           : await bot.channels.fetch(process.env.REPROV_CHANNEL_ID);
 
-      // Novo embed final
+      // Embed final
       const resultadoEmbed = new EmbedBuilder()
         .setTitle(`📋 Whitelist ${acao === "aprovar" ? "Aprovada" : "Reprovada"}`)
         .setColor(acao === "aprovar" ? 0x57f287 : 0xed4245)
@@ -390,7 +392,7 @@ bot.on("interactionCreate", async (interaction) => {
 
       await canalDestino.send({ embeds: [resultadoEmbed] });
 
-      // Edita a mensagem original (remove botões e marca status)
+      // Edita a mensagem original
       const novoEmbed = EmbedBuilder.from(embedOriginal)
         .setColor(acao === "aprovar" ? 0x57f287 : 0xed4245)
         .setFooter({
@@ -409,9 +411,8 @@ bot.on("interactionCreate", async (interaction) => {
       });
 
       // Mensagem de sucesso
-      await interaction.reply({
+      await interaction.editReply({
         content: `✅ Você ${acao === "aprovar" ? "aprovou" : "reprovou"} <@${discordId}> com sucesso!`,
-        ephemeral: true,
       });
     }
   } catch (err) {
@@ -429,3 +430,4 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
