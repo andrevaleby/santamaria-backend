@@ -304,7 +304,7 @@ bot.on("interactionCreate", async (interaction) => {
     if (interaction.isButton()) {
       const [acao, discordId] = interaction.customId.split("_");
 
-      // Busca mensagem original e verifica se já foi processada
+      // Busca mensagem original
       const msgOriginal = await interaction.message.fetch();
       const embedOriginal = msgOriginal.embeds[0];
       const jaProcessada =
@@ -323,9 +323,9 @@ bot.on("interactionCreate", async (interaction) => {
         return;
       }
 
-      // Cria modal
+      // Cria modal com ID da mensagem embutido
       const modal = new ModalBuilder()
-        .setCustomId(`${acao}_modal_${discordId}`)
+        .setCustomId(`${acao}_modal_${discordId}_${msgOriginal.id}`)
         .setTitle(acao === "aprovar" ? "Motivo da Aprovação" : "Motivo da Reprovação");
 
       const motivoInput = new TextInputBuilder()
@@ -340,17 +340,16 @@ bot.on("interactionCreate", async (interaction) => {
 
     // ==================== MODAL ENVIADO ====================
     if (interaction.isModalSubmit()) {
-      const [acao, , discordId] = interaction.customId.split("_modal_");
+      const [acao, , resto] = interaction.customId.split("_modal_");
+      const [discordId, mensagemId] = resto.split("_");
       const motivo = interaction.fields.getTextInputValue("motivo");
       const staffUser = interaction.user;
 
-      // Pega mensagem original (a whitelist)
-      const msgOriginal = interaction.message
-        ? await interaction.message.fetch()
-        : null;
-      const embedOriginal = msgOriginal?.embeds?.[0];
+      // Busca mensagem original com o ID salvo
+      const msgOriginal = await interaction.channel.messages.fetch(mensagemId);
+      const embedOriginal = msgOriginal.embeds[0];
 
-      // Cria embed final
+      // Cria embed final para canal de resultado
       const resultadoEmbed = new EmbedBuilder()
         .setTitle(`📋 Whitelist ${acao === "aprovar" ? "Aprovada" : "Reprovada"}`)
         .setColor(acao === "aprovar" ? 0x57f287 : 0xed4245)
@@ -364,7 +363,6 @@ bot.on("interactionCreate", async (interaction) => {
         })
         .setTimestamp();
 
-      // Envia no canal de destino
       const canalDestino =
         acao === "aprovar"
           ? await bot.channels.fetch(process.env.APPROV_CHANNEL_ID)
@@ -372,27 +370,25 @@ bot.on("interactionCreate", async (interaction) => {
 
       await canalDestino.send({ embeds: [resultadoEmbed] });
 
-      // Edita mensagem original para marcar como processada
-      if (msgOriginal) {
-        const novoEmbed = EmbedBuilder.from(embedOriginal)
-          .setColor(acao === "aprovar" ? 0x57f287 : 0xed4245)
-          .setFooter({
-            text:
-              acao === "aprovar"
-                ? "✅ Esta whitelist já foi aprovada"
-                : "❌ Esta whitelist já foi reprovada",
-          });
-
-        const botoesDesativados = msgOriginal.components[0];
-        botoesDesativados.components.forEach((btn) => btn.setDisabled(true));
-
-        await msgOriginal.edit({
-          embeds: [novoEmbed],
-          components: [botoesDesativados],
+      // Edita mensagem original
+      const novoEmbed = EmbedBuilder.from(embedOriginal)
+        .setColor(acao === "aprovar" ? 0x57f287 : 0xed4245)
+        .setFooter({
+          text:
+            acao === "aprovar"
+              ? "✅ Esta whitelist já foi aprovada"
+              : "❌ Esta whitelist já foi reprovada",
         });
-      }
 
-      // ✅ Responde de forma ephemeral (sem crashar)
+      const botoesDesativados = msgOriginal.components[0];
+      botoesDesativados.components.forEach((btn) => btn.setDisabled(true));
+
+      await msgOriginal.edit({
+        embeds: [novoEmbed],
+        components: [botoesDesativados],
+      });
+
+      // ✅ Confirmação
       await interaction.reply({
         content: `✅ Você ${acao === "aprovar" ? "aprovou" : "reprovou"} <@${discordId}> com sucesso!`,
         ephemeral: true,
@@ -400,24 +396,22 @@ bot.on("interactionCreate", async (interaction) => {
     }
   } catch (err) {
     console.error("❌ Erro na interação:", err);
-    if (interaction.isRepliable()) {
-      try {
-        await interaction.reply({
-          content: "⚠️ Ocorreu um erro ao processar sua ação.",
-          ephemeral: true,
-        });
-      } catch {
-        // Se já respondeu, ignora
-      }
+    if (interaction.isRepliable() && !interaction.replied) {
+      await interaction.reply({
+        content: "⚠️ Ocorreu um erro ao processar sua ação.",
+        ephemeral: true,
+      });
     }
   }
 });
 
 
 
+
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
