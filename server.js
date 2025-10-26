@@ -20,8 +20,8 @@ bot.once("ready", () => {
   console.log(`Bot logado como ${bot.user.tag}`);
 
  bot.user.setPresence({
-  activities: [{ name: process.env.BOT_STATUS, type: 1 }],
-  status: "invisible"
+  activities: [{ name: process.env.BOT_STATUS, type: 3 }],
+  status: "online"
 });
 
   console.log("Status definido: Assistindo Santa Maria RP");
@@ -386,6 +386,7 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
