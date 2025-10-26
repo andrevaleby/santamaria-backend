@@ -304,7 +304,27 @@ bot.on("interactionCreate", async (interaction) => {
     if (interaction.isButton()) {
       const [acao, discordId] = interaction.customId.split("_");
 
-      // Cria modal para o motivo
+      // Busca a mensagem original e verifica se já foi processada
+      const msgOriginal = await interaction.message.fetch();
+      const embedOriginal = msgOriginal.embeds[0];
+      const jaProcessada =
+        embedOriginal?.footer?.text?.includes("aprovada") ||
+        embedOriginal?.footer?.text?.includes("reprovada");
+
+      if (jaProcessada) {
+        // Já aprovada/reprovada -> bloqueia nova ação
+        const statusAnterior = embedOriginal.footer.text.includes("aprovada")
+          ? "aprovou"
+          : "reprovou";
+
+        await interaction.reply({
+          content: `⚠️ Você já ${statusAnterior} o usuário!`,
+          ephemeral: true,
+        });
+        return;
+      }
+
+      // Se não foi processada, mostra o modal normalmente
       const modal = new ModalBuilder()
         .setCustomId(`${acao}_modal_${discordId}`)
         .setTitle(acao === "aprovar" ? "Motivo da Aprovação" : "Motivo da Reprovação");
@@ -323,57 +343,60 @@ bot.on("interactionCreate", async (interaction) => {
     if (interaction.isModalSubmit()) {
       const [acao, , discordId] = interaction.customId.split("_modal_");
       const motivo = interaction.fields.getTextInputValue("motivo");
-
       const user = interaction.user; // quem clicou no botão
 
-      // Busca a mensagem original (a whitelist enviada)
+      // Busca mensagem original e embed
       const msgOriginal = await interaction.message.fetch();
       const embedOriginal = msgOriginal.embeds[0];
 
-      // Prepara novo embed para o canal de destino
+      // Cria embed de resultado
       const resultadoEmbed = new EmbedBuilder()
         .setAuthor({
           name: `${embedOriginal?.author?.name || "Candidato"} (${discordId})`,
-          iconURL: embedOriginal?.thumbnail?.url || null
+          iconURL: embedOriginal?.thumbnail?.url || null,
         })
         .setDescription(`**${acao === "aprovar" ? "✅ Aprovado" : "❌ Reprovado"}**`)
-        .setColor(acao === "aprovar" ? 0x57F287 : 0xED4245)
+        .setColor(acao === "aprovar" ? 0x57f287 : 0xed4245)
         .addFields(
           { name: "👤 Aprovado/Reprovado por", value: `${user.tag}`, inline: false },
           { name: "📝 Motivo", value: motivo, inline: false }
         )
         .setTimestamp()
-        .setFooter({ text: `Whitelist ${acao === "aprovar" ? "aprovada" : "reprovada"}` });
+        .setFooter({
+          text: `Whitelist ${acao === "aprovar" ? "aprovada" : "reprovada"}`,
+        });
 
-      // Envia no canal de destino
-      const canalDestino = acao === "aprovar"
-        ? await bot.channels.fetch(process.env.APPROV_CHANNEL_ID)
-        : await bot.channels.fetch(process.env.REPROV_CHANNEL_ID);
+      // Envia para o canal de destino
+      const canalDestino =
+        acao === "aprovar"
+          ? await bot.channels.fetch(process.env.APPROV_CHANNEL_ID)
+          : await bot.channels.fetch(process.env.REPROV_CHANNEL_ID);
 
       await canalDestino.send({ embeds: [resultadoEmbed] });
 
-      // =============== EDITA A MENSAGEM ORIGINAL ===============
+      // Marca mensagem original como finalizada
       const novoEmbed = EmbedBuilder.from(embedOriginal)
-        .setColor(acao === "aprovar" ? 0x57F287 : 0xED4245)
+        .setColor(acao === "aprovar" ? 0x57f287 : 0xed4245)
         .setFooter({
-          text: acao === "aprovar"
-            ? "✅ Esta whitelist já foi aprovada"
-            : "❌ Esta whitelist já foi reprovada"
+          text:
+            acao === "aprovar"
+              ? "✅ Esta whitelist já foi aprovada"
+              : "❌ Esta whitelist já foi reprovada",
         });
 
       // Desativa botões
       const botoesDesativados = msgOriginal.components[0];
-      botoesDesativados.components.forEach(btn => btn.setDisabled(true));
+      botoesDesativados.components.forEach((btn) => btn.setDisabled(true));
 
       await msgOriginal.edit({
         embeds: [novoEmbed],
-        components: [botoesDesativados]
+        components: [botoesDesativados],
       });
 
-      // Resposta ephemeral
+      // Resposta ephemeral de sucesso
       await interaction.reply({
         content: "✅ Ação registrada com sucesso!",
-        ephemeral: true
+        ephemeral: true,
       });
     }
   } catch (err) {
@@ -382,10 +405,10 @@ bot.on("interactionCreate", async (interaction) => {
 });
 
 
-
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
