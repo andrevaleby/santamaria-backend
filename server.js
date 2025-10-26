@@ -17,10 +17,10 @@ const bot = new Client({
 
 
 bot.once("ready", () => {
-  console.log(`🤖 Bot logado como ${bot.user.tag}`);
+  console.log(`Bot logado como ${bot.user.tag}`);
 
  bot.user.setPresence({
-  activities: [{ name: process.env.BOT_STATUS, type: 0 }],
+  activities: [{ name: process.env.BOT_STATUS, type: 1 }],
   status: "invisible"
 });
 
@@ -386,6 +386,7 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
