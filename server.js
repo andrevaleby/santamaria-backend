@@ -8,7 +8,7 @@ import crypto from "crypto";
 import cors from "cors";
 import pkg from "pg";
 const { Pool } = pkg;
-import { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
+import { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, InteractionResponseFlags } from "discord.js";
 
 // 2️⃣ Criar instância do bot — apenas uma vez
 const bot = new Client({
@@ -298,8 +298,6 @@ app.post("/api/formulario", express.json(), async (req, res) => {
   }
 });
 
-import { InteractionResponseFlags } 
-
 // Declarar uma vez no topo do server.js
 const usuariosProcessados = new Map();
 
@@ -425,6 +423,7 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
