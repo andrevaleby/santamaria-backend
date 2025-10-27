@@ -320,18 +320,16 @@ bot.on("interactionCreate", async (interaction) => {
 
       if (!acao || !discordId) return;
 
-      // Evita múltiplos cliques
+      // 👉 Só bloqueia se o usuário JÁ FOI aprovado/reprovado em um modal anterior
       if (usuariosProcessados.has(discordId)) {
         await interaction.reply({
-          content: `⚠️ Você já ${usuariosProcessados.get(discordId)} este usuário!`,
+          content: `⚠️ Esta whitelist já foi ${usuariosProcessados.get(discordId)}!`,
           ephemeral: true,
         });
         return;
       }
 
-      usuariosProcessados.set(discordId, acao === "aprovar" ? "aprovou" : "reprovou");
-
-      // Cria modal
+      // Mostra o modal (sem marcar como processado ainda!)
       const modal = new ModalBuilder()
         .setCustomId(`modal_${acao}_${discordId}_${interaction.message.id}`)
         .setTitle(acao === "aprovar" ? "Motivo da Aprovação" : "Motivo da Reprovação");
@@ -361,6 +359,9 @@ bot.on("interactionCreate", async (interaction) => {
       const motivo = interaction.fields.getTextInputValue("motivo");
       const staffUser = interaction.user;
 
+      // Agora sim, marca como processado
+      usuariosProcessados.set(discordId, acao === "aprovar" ? "aprovada" : "reprovada");
+
       // Busca mensagem original
       let msgOriginal;
       try {
@@ -375,13 +376,13 @@ bot.on("interactionCreate", async (interaction) => {
 
       const embedOriginal = msgOriginal.embeds[0];
 
-      // Define o canal de destino
+      // Canal de destino
       const canalDestino =
         acao === "aprovar"
           ? await bot.channels.fetch(process.env.APPROV_CHANNEL_ID)
           : await bot.channels.fetch(process.env.REPROV_CHANNEL_ID);
 
-      // Cria embed final
+      // Envia embed final
       const resultadoEmbed = new EmbedBuilder()
         .setTitle(`📋 Whitelist ${acao === "aprovar" ? "Aprovada" : "Reprovada"}`)
         .setColor(acao === "aprovar" ? 0x57f287 : 0xed4245)
@@ -398,10 +399,9 @@ bot.on("interactionCreate", async (interaction) => {
         })
         .setTimestamp();
 
-      // Envia embed final no canal de destino
       await canalDestino.send({ embeds: [resultadoEmbed] });
 
-      // Atualiza a mensagem original
+      // Atualiza mensagem original
       const novoEmbed = EmbedBuilder.from(embedOriginal)
         .setColor(acao === "aprovar" ? 0x57f287 : 0xed4245)
         .setFooter({
@@ -411,7 +411,6 @@ bot.on("interactionCreate", async (interaction) => {
               : "❌ Esta whitelist já foi reprovada",
         });
 
-      // Desativa botões corretamente
       const botoesDesativados = msgOriginal.components[0];
       if (botoesDesativados) {
         botoesDesativados.components =
@@ -425,7 +424,7 @@ bot.on("interactionCreate", async (interaction) => {
         components: botoesDesativados ? [botoesDesativados] : [],
       });
 
-      // ✅ Mensagem de sucesso (sem erro de reply duplo)
+      // Mensagem de sucesso
       if (!interaction.replied) {
         await interaction.reply({
           content: `✅ Você ${acao === "aprovar" ? "aprovou" : "reprovou"} <@${discordId}> com sucesso!`,
@@ -444,9 +443,11 @@ bot.on("interactionCreate", async (interaction) => {
   }
 });
 
+
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
