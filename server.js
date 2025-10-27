@@ -308,16 +308,16 @@ bot.on("interactionCreate", async (interaction) => {
       const [acao, discordId] = interaction.customId.split("_");
       if (!acao || !discordId) return;
 
+      // Verifica se já foi processado
       if (usuariosProcessados.has(discordId)) {
         await interaction.reply({
           content: `⚠️ Você já ${usuariosProcessados.get(discordId)} este usuário!`,
-          flags: InteractionResponseFlags.Ephemeral
+          ephemeral: true
         });
         return;
       }
 
-      usuariosProcessados.set(discordId, acao === "aprovar" ? "aprovou" : "reprovou");
-
+      // Cria e exibe o modal
       const modal = new ModalBuilder()
         .setCustomId(`modal_${acao}_${discordId}_${interaction.message.id}`)
         .setTitle(acao === "aprovar" ? "Motivo da Aprovação" : "Motivo da Reprovação");
@@ -334,14 +334,18 @@ bot.on("interactionCreate", async (interaction) => {
 
     // ==================== MODAL SUBMIT ====================
     if (interaction.isModalSubmit()) {
-      const [_, acao, discordId, mensagemId] = interaction.customId.split("_modal_")[0].split("_");
+      const [_, acao, discordId, mensagemId] = interaction.customId.split("_");
+
       if (!acao || !discordId || !mensagemId) {
         await interaction.reply({
           content: "⚠️ Erro interno ao processar o modal.",
-          flags: InteractionResponseFlags.Ephemeral
+          ephemeral: true
         });
         return;
       }
+
+      // Só agora marca como processado (usuário realmente enviou o modal)
+      usuariosProcessados.set(discordId, acao === "aprovar" ? "aprovou" : "reprovou");
 
       const motivo = interaction.fields.getTextInputValue("motivo");
       const staffUser = interaction.user;
@@ -353,7 +357,7 @@ bot.on("interactionCreate", async (interaction) => {
       } catch {
         await interaction.reply({
           content: "⚠️ Mensagem original não encontrada.",
-          flags: InteractionResponseFlags.Ephemeral
+          ephemeral: true
         });
         return;
       }
@@ -376,7 +380,9 @@ bot.on("interactionCreate", async (interaction) => {
           { name: "📝 Motivo", value: motivo, inline: false }
         )
         .setFooter({
-          text: acao === "aprovar" ? "✅ Whitelist aprovada" : "❌ Whitelist reprovada",
+          text: acao === "aprovar"
+            ? "✅ Whitelist aprovada"
+            : "❌ Whitelist reprovada",
         })
         .setTimestamp();
 
@@ -394,7 +400,7 @@ bot.on("interactionCreate", async (interaction) => {
       if (msgOriginal.components.length > 0) {
         msgOriginal.components.forEach(row => {
           row.components.forEach(btn => {
-            if (btn.setDisabled) btn.setDisabled(true);
+            if (btn.data) btn.data.disabled = true;
           });
         });
       }
@@ -413,16 +419,18 @@ bot.on("interactionCreate", async (interaction) => {
     if (interaction.isRepliable() && !interaction.replied) {
       await interaction.reply({
         content: "⚠️ Ocorreu um erro ao processar sua ação.",
-        flags: InteractionResponseFlags.Ephemeral
+        ephemeral: true
       });
     }
   }
 });
 
 
+
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
