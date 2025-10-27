@@ -310,7 +310,9 @@ app.post("/api/formulario", express.json(), async (req, res) => {
   }
 });
 
-// Declarar uma vez no topo do server.js
+// após dotenv.config();
+const usuariosProcessados = new Map(); // controla quem já teve a whitelist processada
+
 // ==================== INTERAÇÃO PRINCIPAL ====================
 bot.on("interactionCreate", async (interaction) => {
   try {
@@ -447,6 +449,7 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
