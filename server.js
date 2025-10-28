@@ -463,22 +463,23 @@ if (interaction.isModalSubmit()) {
       components: botoesDesativados ? [botoesDesativados] : [],
     });
 
-    // ✅ Atualiza o status no banco
-    await pool.query(
-      "UPDATE users SET status_wl = $1 WHERE discord_id = $2",
-      [acao === "aprovar" ? "aprovado" : "reprovado", discordId]
-    );
+// Mensagem de sucesso
+if (!interaction.replied) {
+  await interaction.reply({
+    content: `✅ Você ${acao === "aprovar" ? "aprovou" : "reprovou"} <@${discordId}> com sucesso!`,
+    ephemeral: true,
+  });
 
-    // Mensagem de sucesso
-    if (!interaction.replied) {
-      await interaction.reply({
-        content: `✅ Você ${
-          acao === "aprovar" ? "aprovou" : "reprovou"
-        } <@${discordId}> com sucesso!`,
-        ephemeral: true,
-      });
-    }
-    } catch (err) {
+  // ✅ Atualiza o status no banco conforme a ação (aprovação ou reprovação)
+  await pool.query(
+    "UPDATE users SET status_wl = $1 WHERE discord_id = $2",
+    [acao === "aprovar" ? "aprovado" : "reprovado", discordId]
+  );
+} 
+
+         } // fecha o if(!interaction.replied)
+    } // fecha o if(interaction.isModalSubmit())
+  } catch (err) {
     console.error("❌ Erro na interação:", err);
     if (interaction.isRepliable() && !interaction.replied) {
       await interaction.reply({
@@ -487,15 +488,19 @@ if (interaction.isModalSubmit()) {
       });
     }
   }
-}); 
-    
-bot.login(process.env.TOKEN);
+}); // fecha bot.on("interactionCreate", async (interaction) => {)
+
+// ✅ INICIAR SERVIDOR
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
