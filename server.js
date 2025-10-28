@@ -64,6 +64,20 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
+// garante a coluna `banned`
+(async () => {
+  try {
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS banned BOOLEAN DEFAULT false;
+    `);
+    console.log("✅ Coluna 'banned' verificada/atualizada");
+  } catch (err) {
+    console.error("❌ Erro ao garantir coluna 'banned':", err);
+  }
+})();
+
+
 // ✅ Garantir tabela de usuários
 (async () => {
   try {
@@ -86,8 +100,9 @@ const pool = new Pool({
 
 const generateState = () => crypto.randomBytes(16).toString("hex");
 
-// ✅ Middleware de autenticação
-const authMiddleware = (req, res, next) => {
+
+// ✅ Middleware de autenticação (atualizado para trazer `banned`)
+const authMiddleware = async (req, res, next) => {
   const token = req.cookies.user;
   if (!token) return res.status(401).json({ error: "Não autenticado" });
 
@@ -96,7 +111,21 @@ const authMiddleware = (req, res, next) => {
       issuer: "santamariaRP",
       audience: "frontend"
     });
-    req.user = user;
+
+    // Busca campo `banned` no banco (caso o usuário exista)
+    try {
+      const result = await pool.query(
+        "SELECT banned, status_wl FROM users WHERE discord_id = $1",
+        [user.id]
+      );
+      const row = result.rows[0] || {};
+      // anexa informação ao req.user (será devolvido no /api/me)
+      req.user = { ...user, banned: !!row.banned, status_wl: row.status_wl || "nenhum" };
+    } catch (dbErr) {
+      console.error("❌ Erro ao buscar banned no banco:", dbErr);
+      // ainda permite prosseguir com o user do token, mas sem banned
+      req.user = { ...user, banned: false, status_wl: "nenhum" };
+    }
     next();
   } catch (err) {
     res.status(401).json({ error: "Token inválido" });
@@ -612,12 +641,112 @@ bot.on("interactionCreate", async (interaction) => {
   }
 });
 
+// Registro do comando
+bot.once("clientReady", async () => {
+  try {
+    const data = new SlashCommandBuilder()
+      .setName("blacklist")
+      .setDescription("Gerenciar blacklist de usuários do forms")
+      .addSubcommand(sub =>
+        sub
+          .setName("banir")
+          .setDescription("Banir um usuário permanentemente do forms")
+          .addStringOption(option =>
+            option
+              .setName("id")
+              .setDescription("ID do usuário do Discord")
+              .setRequired(true)
+          )
+      )
+      .addSubcommand(sub =>
+        sub
+          .setName("desbanir")
+          .setDescription("Remover banimento de um usuário do forms")
+          .addStringOption(option =>
+            option
+              .setName("id")
+              .setDescription("ID do usuário do Discord")
+              .setRequired(true)
+          )
+      );
+
+    await bot.application.commands.create(data);
+    console.log("✅ Comando /blacklist registrado com sucesso!");
+  } catch (err) {
+    console.error("❌ Erro ao registrar comando /blacklist:", err);
+  }
+});
+
+// Tratamento do comando
+bot.on("interactionCreate", async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
+  if (interaction.commandName !== "blacklist") return;
+
+  const cargoAdminNome = process.env.CARGOADMIN; // nome do cargo admin do Render
+  const membro = interaction.member;
+
+  // Verifica se o usuário tem o cargo admin
+  const temCargo = membro.roles.cache.some(
+    (role) => role.name.toLowerCase() === cargoAdminNome.toLowerCase()
+  );
+
+  if (!temCargo) {
+    await interaction.reply({
+      content: `🚫 Você precisa ter o cargo **${cargoAdminNome}** para usar este comando.`,
+      flags: 64,
+    });
+    return;
+  }
+
+  const subcomando = interaction.options.getSubcommand();
+  const userId = interaction.options.getString("id");
+
+  try {
+    // Verifica se o usuário existe no banco
+    const result = await pool.query("SELECT * FROM users WHERE discord_id = $1", [userId]);
+
+    if (result.rowCount === 0) {
+      await interaction.reply({
+        content: "⚠️ Este usuário ainda não enviou o formulário da whitelist.",
+        flags: 64,
+      });
+      return;
+    }
+
+    if (subcomando === "banir") {
+      await pool.query("UPDATE users SET banned = true WHERE discord_id = $1", [userId]);
+      await interaction.reply({
+        content: `✅ O usuário <@${userId}> foi **banido permanentemente** do forms.`,
+        flags: 64,
+      });
+    } else if (subcomando === "desbanir") {
+      await pool.query("UPDATE users SET banned = false WHERE discord_id = $1", [userId]);
+      await interaction.reply({
+        content: `✅ O usuário <@${userId}> foi **desbanido** do forms.`,
+        flags: 64,
+      });
+    } else {
+      await interaction.reply({
+        content: "❌ Subcomando inválido.",
+        flags: 64,
+      });
+    }
+
+  } catch (err) {
+    console.error("❌ Erro ao executar /blacklist:", err);
+    await interaction.reply({
+      content: "⚠️ Ocorreu um erro ao tentar atualizar a blacklist.",
+      flags: 64,
+    });
+  }
+});
 
 
 
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
