@@ -643,7 +643,7 @@ bot.on("interactionCreate", async (interaction) => {
 
 // Registro do comando
 bot.once("clientReady", async () => {
- try {
+  try {
     const data = new SlashCommandBuilder()
       .setName("blacklist")
       .setDescription("Gerenciar blacklist de usuários do forms")
@@ -754,7 +754,9 @@ bot.on("interactionCreate", async (interaction) => {
   }
 });
 
+
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
