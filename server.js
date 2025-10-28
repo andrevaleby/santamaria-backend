@@ -166,6 +166,11 @@ app.get("/api/auth/discord/callback", async (req, res) => {
     // Salvar no banco
     try {
       await pool.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS status_wl VARCHAR(20) DEFAULT 'nenhum';
+    `);
+
+      await pool.query(`
         INSERT INTO users (discord_id, username, avatar, discriminator, esta_no_servidor)
         VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (discord_id) DO UPDATE SET
@@ -256,6 +261,29 @@ app.post("/api/logout", (req, res) => {
 });
 
 // Endpoint do formulário
+
+app.get("/api/status-wl", authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.user;
+    const result = await pool.query("SELECT status_wl FROM users WHERE discord_id = $1", [id]);
+    const status = result.rows[0]?.status_wl || "nenhum";
+    res.json({ status });
+  } catch (err) {
+    console.error("❌ Erro ao buscar status WL:", err);
+    res.status(500).json({ error: "Erro interno" });
+  }
+});
+
+
+const result = await pool.query("SELECT status_wl FROM users WHERE discord_id = $1", [id]);
+const status = result.rows[0]?.status_wl || "nenhum";
+if (status === "pendente") {
+  return res.status(400).json({ message: "Você já enviou sua whitelist e ela está em análise." });
+}
+
+// marca como pendente
+await pool.query("UPDATE users SET status_wl = 'pendente' WHERE discord_id = $1", [id]);
+
 app.post("/api/formulario", express.json(), async (req, res) => {
   try {
     const token = req.cookies.user;
@@ -309,6 +337,12 @@ app.post("/api/formulario", express.json(), async (req, res) => {
     res.status(500).json({ message: "Erro interno" });
   }
 });
+
+// ✅ Atualiza o status no banco
+await pool.query("UPDATE users SET status_wl = $1 WHERE discord_id = $2", [
+  acao === "aprovar" ? "aprovado" : "reprovado",
+  discordId,
+]);
 
 // após dotenv.config();
 const usuariosProcessados = new Map(); // controla quem já teve a whitelist processada
@@ -449,6 +483,7 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
