@@ -540,7 +540,8 @@ bot.on("interactionCreate", async (interaction) => {
 // 🔧 Registrar o comando
 
 // Comando /remover registrado ao iniciar o bot
-bot.once("ready", async () => {
+bot.once("clientReady", async () => {
+  
   try {
     const data = new SlashCommandBuilder()
       .setName("remover")
@@ -617,6 +618,7 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
