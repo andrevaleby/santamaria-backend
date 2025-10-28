@@ -262,6 +262,7 @@ app.post("/api/logout", (req, res) => {
 
 // Endpoint do formulário
 
+// ✅ Rota para consultar status atual da WL
 app.get("/api/status-wl", authMiddleware, async (req, res) => {
   try {
     const { id } = req.user;
@@ -274,16 +275,7 @@ app.get("/api/status-wl", authMiddleware, async (req, res) => {
   }
 });
 
-
-const result = await pool.query("SELECT status_wl FROM users WHERE discord_id = $1", [id]);
-const status = result.rows[0]?.status_wl || "nenhum";
-if (status === "pendente") {
-  return res.status(400).json({ message: "Você já enviou sua whitelist e ela está em análise." });
-}
-
-// marca como pendente
-await pool.query("UPDATE users SET status_wl = 'pendente' WHERE discord_id = $1", [id]);
-
+// ✅ Rota para envio do formulário
 app.post("/api/formulario", express.json(), async (req, res) => {
   try {
     const token = req.cookies.user;
@@ -293,7 +285,20 @@ app.post("/api/formulario", express.json(), async (req, res) => {
     const user = jwt.verify(token, process.env.JWT_SECRET);
     const { username, id, avatar } = user;
 
-    // Dados do formulário
+    // 🔎 Verifica status atual da whitelist
+    const result = await pool.query("SELECT status_wl FROM users WHERE discord_id = $1", [id]);
+    const status = result.rows[0]?.status_wl || "nenhum";
+
+    if (status === "pendente") {
+      return res.status(400).json({
+        message: "Você já enviou sua whitelist e ela está em análise.",
+      });
+    }
+
+    // ⚙️ Marca como pendente no banco
+    await pool.query("UPDATE users SET status_wl = 'pendente' WHERE discord_id = $1", [id]);
+
+    // 🎯 Dados do formulário
     const { resposta1, resposta2, resposta3, resposta4, resposta5, resposta6 } = req.body;
 
     const logChannel = await bot.channels.fetch(process.env.LOG_CHANNEL_ID);
@@ -316,7 +321,7 @@ app.post("/api/formulario", express.json(), async (req, res) => {
         { name: "🎧 Você tem microfone?", value: resposta6 || "-", inline: false }
       )
       .setColor(0x5865F2)
-      .setFooter({ text: "Painel de Froms - © Santa Maria RP" })
+      .setFooter({ text: "Painel de Forms - © Santa Maria RP" })
       .setTimestamp();
 
     const buttons = new ActionRowBuilder().addComponents(
@@ -332,6 +337,7 @@ app.post("/api/formulario", express.json(), async (req, res) => {
 
     await logChannel.send({ embeds: [embed], components: [buttons] });
     res.json({ message: "Formulário enviado com sucesso!" });
+
   } catch (err) {
     console.error("❌ Erro ao enviar formulário:", err);
     res.status(500).json({ message: "Erro interno" });
@@ -483,6 +489,7 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
