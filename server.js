@@ -18,6 +18,7 @@ const {
   ButtonStyle,
   EmbedBuilder,
   SlashCommandBuilder,
+  PermissionFlagsBits,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -535,34 +536,44 @@ bot.on("interactionCreate", async (interaction) => {
 // ==================== COMANDO /remover ====================
 
 // Quando o bot estiver pronto, registra o comando (apenas uma vez)
+
+// 🔧 Registrar o comando
 bot.once("ready", async () => {
   try {
     const data = new SlashCommandBuilder()
       .setName("remover")
-      .setDescription("Remover acesso ao jogo de um player.")
+      .setDescription("Remove o status da whitelist de um jogador.")
       .addStringOption(option =>
-        option.setName("id")
-          .setDescription("ID do usuário do Discord")
+        option
+          .setName("id")
+          .setDescription("ID do usuário do Discord a ser removido.")
           .setRequired(true)
       );
 
     await bot.application.commands.create(data);
-    console.log("✅ Comando /remover registrado com sucesso");
+    console.log("✅ Comando /remover registrado com sucesso!");
   } catch (err) {
     console.error("❌ Erro ao registrar comando /remover:", err);
   }
 });
 
-// Trata o comando
+// 🎯 Tratar o comando
 bot.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   if (interaction.commandName !== "remover") return;
 
-  // Verifica permissão do usuário (só admins podem usar)
-  if (!interaction.member.permissions.has("Administrator")) {
+  const cargoAdminNome = process.env.CARGOADMIN; // ⚙️ Nome do cargo admin configurado no Render
+  const membro = interaction.member;
+
+  // 🔒 Verifica se o usuário tem o cargo configurado
+  const temCargo = membro.roles.cache.some(
+    (role) => role.name.toLowerCase() === cargoAdminNome.toLowerCase()
+  );
+
+  if (!temCargo) {
     await interaction.reply({
-      content: "🚫 Você não tem permissão para usar este comando.",
-      flags: 64, // substitui 'ephemeral: true'
+      content: `🚫 Você precisa ter o cargo **${cargoAdminNome}** para usar este comando.`,
+      flags: 64, // substitui ephemeral: true
     });
     return;
   }
@@ -570,37 +581,40 @@ bot.on("interactionCreate", async (interaction) => {
   const userId = interaction.options.getString("id");
 
   try {
+    // 🔎 Verifica se o usuário existe no banco
     const result = await pool.query("SELECT * FROM users WHERE discord_id = $1", [userId]);
 
     if (result.rowCount === 0) {
       await interaction.reply({
-        content: "⚠️ Usuário não encontrado no banco de dados.",
+        content: "⚠️ Este usuário ainda não enviou o formulário da whitelist.",
         flags: 64,
       });
       return;
     }
 
-    // Remove o status WL
+    // 🧹 Remove o status WL
     await pool.query("UPDATE users SET status_wl = 'nenhum' WHERE discord_id = $1", [userId]);
 
     await interaction.reply({
-      content: `✅ O status WL de <@${userId}> foi removido com sucesso!`,
+      content: `✅ O status da whitelist de <@${userId}> foi removido com sucesso!`,
       flags: 64,
     });
 
   } catch (err) {
     console.error("❌ Erro ao executar /remover:", err);
     await interaction.reply({
-      content: "⚠️ Ocorreu um erro ao tentar remover o status WL.",
+      content: "⚠️ Ocorreu um erro ao tentar remover o status da whitelist.",
       flags: 64,
     });
   }
 });
 
 
+
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
