@@ -40,7 +40,6 @@ bot.once("ready", () => {
 });
 
 
-console.log("Token lido do .env:", process.env.DISCORD_TOKEN);
 bot.login(process.env.DISCORD_TOKEN);
 
 
@@ -351,17 +350,20 @@ const usuariosProcessados = new Map(); // controla quem já teve a whitelist pro
 bot.on("interactionCreate", async (interaction) => {
   try {
     // ==================== BOTÕES ====================
-    if (interaction.isButton()) {
-      const [acao, discordId] = interaction.customId.split("_");
-      if (!acao || !discordId) return;
+    const resStatus = await pool.query(
+      "SELECT status_wl FROM users WHERE discord_id = $1",
+      [discordId]
+    );
+    const statusAtual = resStatus.rows[0]?.status_wl || "nenhum";
+    
+    if (statusAtual === "aprovado" || statusAtual === "reprovado") {
+      await interaction.reply({
+        content: `⚠️ Esta whitelist já foi ${statusAtual}!`,
+        ephemeral: true,
+      });
+      return;
+    }
 
-      if (usuariosProcessados.has(discordId)) {
-        await interaction.reply({
-          content: `⚠️ Esta whitelist já foi ${usuariosProcessados.get(discordId)}!`,
-          ephemeral: true,
-        });
-        return;
-      }
 
       const modal = new ModalBuilder()
         .setCustomId(`modal_${acao}_${discordId}_${interaction.message.id}`)
@@ -393,10 +395,10 @@ bot.on("interactionCreate", async (interaction) => {
       const staffUser = interaction.user;
 
       // Marca como processado
-      usuariosProcessados.set(
-        discordId,
-        acao === "aprovar" ? "aprovada" : "reprovada"
-      );
+    usuariosProcessados.set(
+      discordId,
+      acao === "aprovar" ? "aprovada" : "reprovada"
+    );
 
       // Busca mensagem original
       let msgOriginal;
@@ -463,11 +465,11 @@ bot.on("interactionCreate", async (interaction) => {
         });
       }
 
-      await pool.query(
-        "UPDATE users SET status_wl = $1 WHERE discord_id = $2",
-        [acao === "aprovar" ? "aprovado" : "reprovado", discordId]
-      );
-    }
+  await pool.query(
+    "UPDATE users SET status_wl = $1 WHERE discord_id = $2",
+    [acao === "aprovar" ? "aprovado" : "reprovado", discordId]
+  );
+
 
   } catch (err) {
     console.error("❌ Erro na interação:", err);
@@ -482,7 +484,8 @@ bot.on("interactionCreate", async (interaction) => {
 
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+
 
 
 
