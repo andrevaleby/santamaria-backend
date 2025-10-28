@@ -17,6 +17,7 @@ const {
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
+  SlashCommandBuilder,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -531,10 +532,76 @@ bot.on("interactionCreate", async (interaction) => {
   }
 });
 
+// ==================== COMANDO /remover ====================
+
+// Quando o bot estiver pronto, registra o comando (apenas uma vez)
+bot.once("ready", async () => {
+  try {
+    const data = new SlashCommandBuilder()
+      .setName("remover")
+      .setDescription("Remover acesso ao jogo de um player.")
+      .addStringOption(option =>
+        option.setName("id")
+          .setDescription("ID do usuário do Discord")
+          .setRequired(true)
+      );
+
+    await bot.application.commands.create(data);
+    console.log("✅ Comando /remover registrado com sucesso");
+  } catch (err) {
+    console.error("❌ Erro ao registrar comando /remover:", err);
+  }
+});
+
+// Trata o comando
+bot.on("interactionCreate", async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
+  if (interaction.commandName !== "remover") return;
+
+  // Verifica permissão do usuário (só admins podem usar)
+  if (!interaction.member.permissions.has("Administrator")) {
+    await interaction.reply({
+      content: "🚫 Você não tem permissão para usar este comando.",
+      flags: 64, // substitui 'ephemeral: true'
+    });
+    return;
+  }
+
+  const userId = interaction.options.getString("id");
+
+  try {
+    const result = await pool.query("SELECT * FROM users WHERE discord_id = $1", [userId]);
+
+    if (result.rowCount === 0) {
+      await interaction.reply({
+        content: "⚠️ Usuário não encontrado no banco de dados.",
+        flags: 64,
+      });
+      return;
+    }
+
+    // Remove o status WL
+    await pool.query("UPDATE users SET status_wl = 'nenhum' WHERE discord_id = $1", [userId]);
+
+    await interaction.reply({
+      content: `✅ O status WL de <@${userId}> foi removido com sucesso!`,
+      flags: 64,
+    });
+
+  } catch (err) {
+    console.error("❌ Erro ao executar /remover:", err);
+    await interaction.reply({
+      content: "⚠️ Ocorreu um erro ao tentar remover o status WL.",
+      flags: 64,
+    });
+  }
+});
+
 
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
