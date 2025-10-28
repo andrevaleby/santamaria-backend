@@ -681,7 +681,7 @@ bot.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   if (interaction.commandName !== "blacklist") return;
 
-  const cargoAdminNome = process.env.CARGOADMIN; // nome do cargo admin do Render
+  const cargoAdminNome = process.env.CARGOADMIN; // Nome do cargo admin
   const membro = interaction.member;
 
   // Verifica se o usuário tem o cargo admin
@@ -757,3 +757,4 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
