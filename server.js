@@ -478,7 +478,7 @@ if (interaction.isModalSubmit()) {
         ephemeral: true,
       });
     }
-  } catch (err) {
+    } catch (err) {
     console.error("❌ Erro na interação:", err);
     if (interaction.isRepliable() && !interaction.replied) {
       await interaction.reply({
@@ -487,12 +487,16 @@ if (interaction.isModalSubmit()) {
       });
     }
   }
-}
+}); 
+    
+bot.login(process.env.TOKEN);
+
 
 
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
