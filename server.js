@@ -538,6 +538,8 @@ bot.on("interactionCreate", async (interaction) => {
 // Quando o bot estiver pronto, registra o comando (apenas uma vez)
 
 // 🔧 Registrar o comando
+
+// Comando /remover registrado ao iniciar o bot
 bot.once("ready", async () => {
   try {
     const data = new SlashCommandBuilder()
@@ -557,15 +559,15 @@ bot.once("ready", async () => {
   }
 });
 
-// 🎯 Tratar o comando
+// Tratar o comando
 bot.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   if (interaction.commandName !== "remover") return;
 
-  const cargoAdminNome = process.env.CARGOADMIN; // ⚙️ Nome do cargo admin configurado no Render
+  const cargoAdminNome = process.env.CARGOADMIN; // ⚙️ Nome do cargo admin
   const membro = interaction.member;
 
-  // 🔒 Verifica se o usuário tem o cargo configurado
+  // Verifica se o usuário que executa o comando tem o cargo correto
   const temCargo = membro.roles.cache.some(
     (role) => role.name.toLowerCase() === cargoAdminNome.toLowerCase()
   );
@@ -573,7 +575,7 @@ bot.on("interactionCreate", async (interaction) => {
   if (!temCargo) {
     await interaction.reply({
       content: `🚫 Você precisa ter o cargo **${cargoAdminNome}** para usar este comando.`,
-      flags: 64, // substitui ephemeral: true
+      flags: 64, // equivalente a ephemeral
     });
     return;
   }
@@ -581,7 +583,7 @@ bot.on("interactionCreate", async (interaction) => {
   const userId = interaction.options.getString("id");
 
   try {
-    // 🔎 Verifica se o usuário existe no banco
+    // Verifica se o usuário existe no banco
     const result = await pool.query("SELECT * FROM users WHERE discord_id = $1", [userId]);
 
     if (result.rowCount === 0) {
@@ -592,7 +594,7 @@ bot.on("interactionCreate", async (interaction) => {
       return;
     }
 
-    // 🧹 Remove o status WL
+    // Remove o status da whitelist
     await pool.query("UPDATE users SET status_wl = 'nenhum' WHERE discord_id = $1", [userId]);
 
     await interaction.reply({
@@ -611,9 +613,11 @@ bot.on("interactionCreate", async (interaction) => {
 
 
 
+
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
