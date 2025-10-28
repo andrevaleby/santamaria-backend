@@ -643,31 +643,30 @@ bot.on("interactionCreate", async (interaction) => {
 
 // Registro do comando
 bot.once("clientReady", async () => {
-  try {
+ try {
     const data = new SlashCommandBuilder()
       .setName("blacklist")
       .setDescription("Gerenciar blacklist de usuários do forms")
-      .addSubcommand(sub =>
-        sub
-          .setName("banir")
-          .setDescription("Banir um usuário permanentemente do forms")
-          .addStringOption(option =>
-            option
-              .setName("id")
-              .setDescription("ID do usuário do Discord")
-              .setRequired(true)
+      .addStringOption(option =>
+        option
+          .setName("acao")
+          .setDescription("Escolha banir ou desbanir")
+          .setRequired(true)
+          .addChoices(
+            { name: "Banir", value: "banir" },
+            { name: "Desbanir", value: "desbanir" }
           )
       )
-      .addSubcommand(sub =>
-        sub
-          .setName("desbanir")
-          .setDescription("Remover banimento de um usuário do forms")
-          .addStringOption(option =>
-            option
-              .setName("id")
-              .setDescription("ID do usuário do Discord")
-              .setRequired(true)
-          )
+      .addStringOption(option =>
+        option
+          .setName("motivo")
+          .setDescription("Motivo do banimento (apenas para banir)")
+      )
+      .addStringOption(option =>
+        option
+          .setName("id")
+          .setDescription("ID do usuário do Discord")
+          .setRequired(true)
       );
 
     await bot.application.commands.create(data);
@@ -698,8 +697,9 @@ bot.on("interactionCreate", async (interaction) => {
     return;
   }
 
-  const subcomando = interaction.options.getSubcommand();
+  const acao = interaction.options.getString("acao");
   const userId = interaction.options.getString("id");
+  const motivo = interaction.options.getString("motivo") || null;
 
   try {
     // Verifica se o usuário existe no banco
@@ -713,21 +713,34 @@ bot.on("interactionCreate", async (interaction) => {
       return;
     }
 
-    if (subcomando === "banir") {
-      await pool.query("UPDATE users SET banned = true WHERE discord_id = $1", [userId]);
+    if (acao === "banir") {
+      if (!motivo) {
+        await interaction.reply({
+          content: "⚠️ Você precisa informar um motivo para banir o usuário.",
+          flags: 64,
+        });
+        return;
+      }
+      await pool.query(
+        "UPDATE users SET banned = true, ban_reason = $1 WHERE discord_id = $2",
+        [motivo, userId]
+      );
       await interaction.reply({
-        content: `✅ O usuário <@${userId}> foi **banido permanentemente** do forms.`,
+        content: `✅ O usuário <@${userId}> foi **banido permanentemente** do forms.\nMotivo: ${motivo}`,
         flags: 64,
       });
-    } else if (subcomando === "desbanir") {
-      await pool.query("UPDATE users SET banned = false WHERE discord_id = $1", [userId]);
+    } else if (acao === "desbanir") {
+      await pool.query(
+        "UPDATE users SET banned = false, ban_reason = NULL WHERE discord_id = $1",
+        [userId]
+      );
       await interaction.reply({
         content: `✅ O usuário <@${userId}> foi **desbanido** do forms.`,
         flags: 64,
       });
     } else {
       await interaction.reply({
-        content: "❌ Subcomando inválido.",
+        content: "❌ Ação inválida. Escolha 'banir' ou 'desbanir'.",
         flags: 64,
       });
     }
@@ -735,58 +748,12 @@ bot.on("interactionCreate", async (interaction) => {
   } catch (err) {
     console.error("❌ Erro ao executar /blacklist:", err);
     await interaction.reply({
-      content: "⚠️ Ocorreu um erro ao tentar atualizar a blacklist.",
+      content: "⚠️ Ocorreu um erro ao atualizar a blacklist.",
       flags: 64,
     });
   }
 });
 
-
-
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
