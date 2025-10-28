@@ -344,11 +344,12 @@ app.post("/api/formulario", express.json(), async (req, res) => {
   }
 });
 
-// ✅ Atualiza o status no banco
-await pool.query("UPDATE users SET status_wl = $1 WHERE discord_id = $2", [
-  acao === "aprovar" ? "aprovado" : "reprovado",
-  discordId,
-]);
+// ✅ Atualiza o status no banco conforme a ação (aprovação ou reprovação)
+await pool.query(
+  "UPDATE users SET status_wl = $1 WHERE discord_id = $2",
+  [acao === "aprovar" ? "aprovado" : "reprovado", discordId]
+);
+
 
 // após dotenv.config();
 const usuariosProcessados = new Map(); // controla quem já teve a whitelist processada
@@ -489,6 +490,7 @@ bot.on("interactionCreate", async (interaction) => {
 // ✅ INICIAR SERVIDOR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+
 
 
 
